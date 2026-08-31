@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client'
 
 import { AppShell } from './components/AppShell'
 import { HintVisualView } from './components/HintVisual'
-import { STAGE_ORDER, templatesFor, worldById } from './data/worlds'
-import { buildStage, checkAnswer, stageSeed, type StageLevel } from './engine'
+import { STAGE_ORDER, stageRuleFor, templatesFor, worldById } from './data/worlds'
+import { buildStage, checkAnswer, stageSeed, type StageLevel, type WorldId } from './engine'
 import { Feedback } from './components/Feedback'
 import { QuestionCard } from './components/QuestionCard'
 import { ResultScreen } from './screens/ResultScreen'
@@ -26,8 +26,10 @@ const params = new URLSearchParams(window.location.search)
 const screen = params.get('screen') ?? 'title'
 const world = worldById(1)
 
-function stageAt(level: StageLevel) {
-  return buildStage(templatesFor(world, level), stageSeed(world.id, level, 0))
+function stageAt(level: StageLevel, worldId: WorldId = 1) {
+  const meta = worldById(worldId)
+  const rule = stageRuleFor(worldId, level)
+  return buildStage(templatesFor(meta, level), stageSeed(worldId, level, 0), { count: rule.count })
 }
 
 /** 몇 판 해 본 저장. 잠금이 풀린 모습과 별이 붙은 모습을 함께 본다. */
@@ -76,6 +78,61 @@ function View() {
         onNext={() => undefined}
         onMap={() => undefined}
       />
+    )
+  }
+
+  // w2-3, w3-boss 처럼 월드를 지정해 여는 화면
+  const scoped = /^w(\d)-(\w+)$/.exec(screen)
+  if (scoped) {
+    const worldId = Number(scoped[1]) as WorldId
+    const raw = scoped[2] ?? '1'
+    const level = (raw === 'boss' ? 'boss' : Number(raw)) as StageLevel
+    const meta = worldById(worldId)
+    const rule = stageRuleFor(worldId, level)
+    return (
+      <StageScreen
+        questions={stageAt(level, worldId)}
+        label={`${meta.name} · ${level === 'boss' ? '보스' : `${String(level)}단계`}`}
+        onFinish={() => undefined}
+        {...(rule.timeLimitSeconds === undefined ? {} : { timeLimitSeconds: rule.timeLimitSeconds })}
+      />
+    )
+  }
+
+  if (screen === 'w2feedback') {
+    // 세로셈 그림 힌트가 펴진 가장 키 큰 상태
+    const question = stageAt(4, 2)[0]
+    if (!question) return null
+    return (
+      <div className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
+        <QuestionCard prompt={question.prompt} />
+        <Feedback
+          result={checkAnswer(question, 0)}
+          {...(question.hintVisual === undefined
+            ? {}
+            : { visual: <HintVisualView visual={question.hintVisual} /> })}
+          onRetry={() => undefined}
+          onNext={() => undefined}
+        />
+      </div>
+    )
+  }
+
+  if (screen === 'w3feedback') {
+    const question = stageAt(3, 3)[0]
+    if (!question) return null
+    return (
+      <div className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
+        <QuestionCard prompt={question.prompt} />
+        <Feedback
+          result={checkAnswer(question, 0)}
+          {...(question.hintVisual === undefined
+            ? {}
+            : { visual: <HintVisualView visual={question.hintVisual} /> })}
+          onRetry={() => undefined}
+          onNext={() => undefined}
+        />
+      </div>
     )
   }
 

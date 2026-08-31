@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { AppShell } from './components/AppShell'
-import { STAGE_ORDER, templatesFor, worldById } from './data/worlds'
+import { STAGE_ORDER, stageRuleFor, templatesFor, worldById } from './data/worlds'
 import { buildStage, stageSeed, starsFor, type StageLevel, type WorldId } from './engine'
 import { ResultScreen } from './screens/ResultScreen'
 import { StageScreen, type StageOutcome } from './screens/StageScreen'
@@ -55,17 +55,22 @@ function Router() {
 
   if (route.name === 'stage') {
     const world = worldById(route.world)
-    const questions = buildStage(
-      templatesFor(world, route.level),
-      stageSeed(world.id, route.level, route.attempt),
-    )
+    const templates = templatesFor(world, route.level)
+    const rule = stageRuleFor(world.id, route.level)
+    const questions = buildStage(templates, stageSeed(world.id, route.level, route.attempt), {
+      count: rule.count,
+    })
     return (
       <StageScreen
         key={`${String(route.world)}-${String(route.level)}-${String(route.attempt)}`}
         questions={questions}
+        templates={templates}
+        {...(rule.timeLimitSeconds === undefined
+          ? {}
+          : { timeLimitSeconds: rule.timeLimitSeconds })}
         label={`${world.name} · ${levelLabel(route.level)}`}
         onFinish={(outcome) => {
-          const stars = starsFor(outcome.correct, outcome.total)
+          const stars = starsFor(outcome.correct, outcome.total, rule.starThresholds)
           finishStage({
             world: route.world,
             level: route.level,
@@ -81,7 +86,11 @@ function Router() {
   }
 
   const world = worldById(route.world)
-  const stars = starsFor(route.outcome.correct, route.outcome.total)
+  const stars = starsFor(
+    route.outcome.correct,
+    route.outcome.total,
+    stageRuleFor(route.world, route.level).starThresholds,
+  )
   const nextLevel = STAGE_ORDER[STAGE_ORDER.indexOf(route.level) + 1]
   const gotPart = route.level === 'boss' && stars >= 1
 

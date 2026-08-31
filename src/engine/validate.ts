@@ -150,6 +150,16 @@ function inspectHintVisual(question: Question): string[] {
       return visual.step > 0 && visual.times > 0 && visual.step * visual.times <= 200
         ? []
         : [`그림 힌트의 묶음이 이상하다: ${String(visual.step)}씩 ${String(visual.times)}묶음`]
+    case 'columnMath': {
+      const { left, right, operation } = visual
+      if (![left, right].every((v) => Number.isInteger(v) && v >= 0)) {
+        return ['세로셈 그림의 수가 이상하다.']
+      }
+      // 세로셈에서 음수가 나오면 초등 범위를 벗어난다
+      return operation === 'subtract' && left < right
+        ? [`세로셈 그림이 음수가 된다: ${String(left)} − ${String(right)}`]
+        : []
+    }
   }
 }
 

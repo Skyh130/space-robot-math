@@ -34,8 +34,8 @@ describe('WorldMapScreen — 행성 목록', () => {
     render(
       <WorldMapScreen save={defaultSave()} openWorld={null} onOpenWorld={noop} onPlay={noop} />,
     )
-    expect(screen.getAllByText('준비 중')).toHaveLength(7)
-    expect(screen.getByRole('button', { name: /중력 협곡/ })).toBeDisabled()
+    expect(screen.getAllByText('준비 중')).toHaveLength(5)
+    expect(screen.getByRole('button', { name: /관제 스테이션/ })).toBeDisabled()
   })
 
   it('갈 수 있는 행성을 누르면 펼친다', async () => {

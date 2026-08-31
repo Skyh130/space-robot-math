@@ -34,6 +34,14 @@ const SCREENS = [
   { name: 'Lv5 숫자 카드', screen: '5' },
   { name: '보스 순서 배열', screen: 'boss' },
   { name: '오답 피드백(그림 힌트)', screen: 'feedback' },
+  { name: 'W2 Lv1 덧셈', screen: 'w2-1' },
+  { name: 'W2 Lv4 세 자리', screen: 'w2-4' },
+  { name: 'W2 Lv5 문장제', screen: 'w2-5' },
+  { name: 'W2 오답(세로셈 힌트)', screen: 'w2feedback' },
+  { name: 'W3 Lv1 구구단', screen: 'w3-1' },
+  { name: 'W3 Lv5 식 세우기', screen: 'w3-5' },
+  { name: 'W3 보스(타이머)', screen: 'w3-boss' },
+  { name: 'W3 오답(묶음 힌트)', screen: 'w3feedback' },
   { name: '결과 화면', screen: 'result' },
 ]
 

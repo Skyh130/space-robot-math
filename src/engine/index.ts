@@ -16,6 +16,7 @@ export {
   type ValidateOptions,
 } from './validate'
 export { josa, josaOf, readNumberKo, type JosaPair } from './korean'
+export { requeueMissed, REQUEUE_GAP } from './session'
 export {
   buildStage,
   stageSeed,

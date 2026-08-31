@@ -48,4 +48,4 @@ Tailwind는 3.x를 쓴다. 4.x는 Safari 16.4 / Chrome 111 이상을 요구해�
 
 ## 진행 상황
 
-Phase 4 (저장과 월드맵) 완료. 다음은 Phase 5 월드 2, 3.
+Phase 5 (월드 2, 3) 완료. 다음은 Phase 6 격납고와 PWA — 여기까지가 MVP.

@@ -93,6 +93,16 @@ export type HintVisual =
   | { readonly kind: 'numberLine'; readonly values: readonly number[]; readonly highlight?: number }
   /** ○를 묶음으로 늘어놓고 누적 수를 적는다. 곱셈·뛰어 세기용. */
   | { readonly kind: 'dotGroups'; readonly step: number; readonly times: number }
+  /**
+   * 세로셈. 자리를 맞춰 놓고 받아올림 1이 윗자리로 올라가는(또는 10을 빌려 오는)
+   * 과정을 보여준다. W2 의 핵심 힌트다. (설계서 5장)
+   */
+  | {
+      readonly kind: 'columnMath'
+      readonly left: number
+      readonly right: number
+      readonly operation: 'add' | 'subtract'
+    }
 
 /**
  * 문제 템플릿.

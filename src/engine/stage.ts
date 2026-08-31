@@ -47,10 +47,18 @@ export function stageSeed(worldId: number, level: number | string, attempt: numb
   return (hashSeed(`w${String(worldId)}_lv${String(level)}`) + attempt * 104729) >>> 0
 }
 
-/** 별 개수. 8문제 중 6개↑ ★ / 7개↑ ★★ / 8개 ★★★ (설계서 1장) */
-export function starsFor(correct: number, total: number = QUESTIONS_PER_STAGE): 0 | 1 | 2 | 3 {
-  if (correct >= total) return 3
-  if (correct >= total - 1) return 2
-  if (correct >= total - 2) return 1
+/**
+ * 별 개수. 8문제 중 6개↑ ★ / 7개↑ ★★ / 8개 ★★★ (설계서 1장)
+ * 문제 수가 다른 스테이지는 기준을 따로 넘긴다. (W3 보스는 12문제다)
+ */
+export function starsFor(
+  correct: number,
+  total: number = QUESTIONS_PER_STAGE,
+  thresholds?: readonly [number, number, number],
+): 0 | 1 | 2 | 3 {
+  const [one, two, three] = thresholds ?? [total - 2, total - 1, total]
+  if (correct >= three) return 3
+  if (correct >= two) return 2
+  if (correct >= one) return 1
   return 0
 }
