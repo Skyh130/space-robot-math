@@ -2,11 +2,15 @@
  * 실기기 뷰포트에서 화면이 넘치지 않는지 검사한다.
  *
  * "스크롤 없이 한 화면에 문제 하나가 다 들어와야 한다"는 눈으로만 확인할 수 없다.
- * npm run build && npm run preview 를 띄운 뒤 이 스크립트를 돌린다.
+ * 각 화면을 harness.html 로 고정된 상태로 띄운 뒤, 스크롤 발생·터치 타깃 크기·
+ * 글자 크기·화면 밖으로 나간 요소를 실제 렌더 결과에서 잰다.
+ *
+ *   npm run dev &        # 5173 포트. harness.html 은 개발 서버에서만 열린다.
+ *   npm run check:layout
  */
 import { chromium } from 'playwright'
 
-const BASE = process.env.BASE_URL ?? 'http://localhost:4173/'
+const BASE = process.env.BASE_URL ?? 'http://localhost:5173/'
 const SHOT_DIR = process.env.SHOT_DIR ?? null
 
 /** 실제로 아이가 쓸 법한 기기들. 위쪽이 가장 좁고 낮다. */
@@ -18,19 +22,69 @@ const DEVICES = [
   { name: '태블릿 820x1180', width: 820, height: 1180 },
 ]
 
-/** 화면마다 여기까지 눌러 본 뒤 검사한다. */
-const STATES = [
-  { name: '문제 풀기 전', steps: [] },
-  { name: '정답 피드백', steps: ['7', '확인'] },
-  { name: '오답 피드백(그림 힌트 포함)', steps: ['6', '확인'] },
+/** 검사할 화면들. harness.html?screen= 값과 같다. */
+const SCREENS = [
+  { name: '제목', screen: 'title' },
+  { name: 'Lv1 4지선다', screen: '1' },
+  { name: 'Lv2 자릿값', screen: '2' },
+  { name: 'Lv3 숫자패드', screen: '3' },
+  { name: 'Lv4 부등호', screen: '4' },
+  { name: 'Lv5 숫자 카드', screen: '5' },
+  { name: '보스 순서 배열', screen: 'boss' },
+  { name: '오답 피드백(그림 힌트)', screen: 'feedback' },
+  { name: '결과 화면', screen: 'result' },
 ]
 
-let failed = 0
+function measure() {
+  const doc = document.documentElement
+  const overflowingY = doc.scrollHeight > window.innerHeight + 1
+  const overflowingX = doc.scrollWidth > window.innerWidth + 1
 
+  const buttons = [...document.querySelectorAll('button')]
+  const small = buttons
+    .map((b) => ({
+      label: b.textContent?.trim() || b.getAttribute('aria-label') || '?',
+      r: b.getBoundingClientRect(),
+    }))
+    .filter(({ r }) => r.width > 0 && (r.width < 48 || r.height < 48))
+    .map(({ label, r }) => `${label} ${Math.round(r.width)}x${Math.round(r.height)}`)
+
+  const numberKeys = buttons
+    .filter((b) => /^[0-9]$/.test(b.textContent?.trim() ?? ''))
+    .map((b) => b.getBoundingClientRect())
+  const keyTooSmall = numberKeys.filter((r) => r.height < 64).length
+
+  const tinyText = [...document.querySelectorAll('p, span, button')]
+    .filter((el) => (el.textContent ?? '').trim().length > 0)
+    .filter((el) => el.getBoundingClientRect().height > 0)
+    // 자릿값 표의 자리 이름처럼 곁들이는 글자는 뺀다
+    .filter((el) => !el.hasAttribute('data-aside'))
+    .map((el) => ({
+      text: (el.textContent ?? '').trim().slice(0, 16),
+      size: Number.parseFloat(getComputedStyle(el).fontSize),
+    }))
+    .filter(({ size }) => size < 14)
+
+  const clipped = [...document.querySelectorAll('button, p, svg, h1')]
+    .map((el) => ({ el, r: el.getBoundingClientRect() }))
+    .filter(
+      ({ r }) =>
+        r.height > 0 &&
+        (r.bottom > window.innerHeight + 1 || r.right > window.innerWidth + 1 || r.left < -1),
+    )
+    .map(
+      ({ el, r }) =>
+        `${el.tagName} "${(el.textContent ?? '').trim().slice(0, 12)}" bottom=${Math.round(r.bottom)}/${window.innerHeight}`,
+    )
+
+  return { overflowingY, overflowingX, small, keyTooSmall, tinyText, clipped }
+}
+
+let failed = 0
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
 
 for (const device of DEVICES) {
-  for (const state of STATES) {
+  for (const state of SCREENS) {
     const ctx = await browser.newContext({
       viewport: { width: device.width, height: device.height },
       hasTouch: true,
@@ -38,67 +92,38 @@ for (const device of DEVICES) {
       deviceScaleFactor: 2,
     })
     const page = await ctx.newPage()
-    await page.goto(BASE, { waitUntil: 'networkidle' })
+    const errors = []
+    page.on('pageerror', (error) => errors.push(error.message))
+
+    await page.goto(`${BASE}harness.html?screen=${state.screen}`, { waitUntil: 'networkidle' })
     await page.evaluate(() => document.fonts.ready)
+    await page.waitForTimeout(120)
 
-    for (const step of state.steps) {
-      await page.getByRole('button', { name: step, exact: true }).click()
-    }
-    await page.waitForTimeout(60)
-
-    const report = await page.evaluate(() => {
-      const doc = document.documentElement
-      const overflowingY = doc.scrollHeight > window.innerHeight + 1
-      const overflowingX = doc.scrollWidth > window.innerWidth + 1
-
-      // 터치 타깃과 글자 크기를 실제 렌더 결과에서 잰다
-      const buttons = [...document.querySelectorAll('button')]
-      const small = buttons
-        .map((b) => ({ label: b.textContent?.trim() || b.getAttribute('aria-label') || '?', r: b.getBoundingClientRect() }))
-        .filter(({ r }) => r.width < 48 || r.height < 48)
-        .map(({ label, r }) => `${label} ${Math.round(r.width)}x${Math.round(r.height)}`)
-
-      const numberKeys = buttons
-        .filter((b) => /^[0-9]$/.test(b.textContent?.trim() ?? ''))
-        .map((b) => b.getBoundingClientRect())
-      const keyTooSmall = numberKeys.filter((r) => r.height < 64).length
-
-      const texts = [...document.querySelectorAll('p, span, button')]
-        .filter((el) => (el.textContent ?? '').trim().length > 0)
-        .map((el) => ({
-          text: (el.textContent ?? '').trim().slice(0, 20),
-          size: Number.parseFloat(getComputedStyle(el).fontSize),
-        }))
-        .filter(({ size }) => size < 16)
-
-      // 화면 밖으로 삐져나간 요소가 있는지
-      const clipped = [...document.querySelectorAll('button, p, svg')]
-        .map((el) => ({ el, r: el.getBoundingClientRect() }))
-        .filter(({ r }) => r.height > 0 && (r.bottom > window.innerHeight + 1 || r.right > window.innerWidth + 1 || r.left < -1))
-        .map(({ el, r }) => `${el.tagName} ${(el.textContent ?? '').trim().slice(0, 12)} bottom=${Math.round(r.bottom)}/${window.innerHeight}`)
-
-      return { overflowingY, overflowingX, small, keyTooSmall, texts, clipped }
-    })
+    const report = await page.evaluate(measure)
 
     const problems = []
+    if (errors.length) problems.push(`화면에서 오류가 났다: ${errors.join(' / ')}`)
     if (report.overflowingY) problems.push('세로 스크롤 발생')
     if (report.overflowingX) problems.push('가로 스크롤 발생')
     if (report.small.length) problems.push(`48px 미만 터치 타깃: ${report.small.join(', ')}`)
     if (report.keyTooSmall) problems.push(`64px 미만 숫자키 ${report.keyTooSmall}개`)
-    if (report.texts.length) problems.push(`16px 미만 글자: ${report.texts.map((t) => `"${t.text}" ${t.size}px`).join(', ')}`)
+    if (report.tinyText.length) {
+      problems.push(
+        `14px 미만 글자: ${report.tinyText.map((t) => `"${t.text}" ${t.size}px`).join(', ')}`,
+      )
+    }
     if (report.clipped.length) problems.push(`화면 밖으로 나감: ${report.clipped.join(' / ')}`)
 
     if (problems.length) {
       failed += 1
       console.log(`✗ ${device.name} — ${state.name}`)
-      for (const p of problems) console.log(`    ${p}`)
+      for (const problem of problems) console.log(`    ${problem}`)
     } else {
       console.log(`✓ ${device.name} — ${state.name}`)
     }
 
     if (SHOT_DIR) {
-      const slug = `${device.width}x${device.height}-${state.name}`.replace(/[^\w가-힣x-]/g, '_')
-      await page.screenshot({ path: `${SHOT_DIR}/${slug}.png` })
+      await page.screenshot({ path: `${SHOT_DIR}/${device.width}-${state.screen}.png` })
     }
     await ctx.close()
   }

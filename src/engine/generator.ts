@@ -80,6 +80,20 @@ function sampleParams(
   return params
 }
 
+/**
+ * 뽑힌 파라미터로 문제 하나를 만든다.
+ *
+ * generateQuestion 과 템플릿 검사기(validate.ts)가 같은 길을 쓰도록 밖으로 뺐다.
+ * 검사기가 다른 길로 만들면, 검사에서 통과한 템플릿이 실제로는 터질 수 있다.
+ */
+export function composeQuestion(
+  template: AnyQuestionTemplate,
+  params: Readonly<Record<string, number>>,
+  rng: Rng,
+): Question {
+  return build(template, params, Object.keys(template.params), rng)
+}
+
 function build(
   template: AnyQuestionTemplate,
   params: Readonly<Record<string, number>>,
@@ -98,6 +112,7 @@ function build(
     params,
     answer,
     hint: template.hint(params),
+    ...(template.hintVisual === undefined ? {} : { hintVisual: template.hintVisual(params) }),
     ...(template.inputType === 'choice'
       ? { choices: buildChoices(template, params, answer, rng) }
       : {}),

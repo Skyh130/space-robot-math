@@ -25,10 +25,12 @@ npm run preview    # 빌드 결과 확인
 16px 미만 글자, 화면 밖으로 나간 요소를 검사한다.
 
 ```bash
-npm run build
-npm run preview &        # 4173 포트
+npm run dev &        # 5173 포트
 npm run check:layout
 ```
+
+각 화면은 `harness.html` 로 고정된 상태로 띄워 잰다. 이 페이지는 개발 서버에서만
+열리며 `vite build` 의 입력이 아니라 배포본에는 들어가지 않는다.
 
 휴대폰 실기기에서 볼 때는 `npm run dev -- --host` 로 띄우고 같은 와이파이에서 접속한다.
 
@@ -46,4 +48,4 @@ Tailwind는 3.x를 쓴다. 4.x는 Safari 16.4 / Chrome 111 이상을 요구해�
 
 ## 진행 상황
 
-Phase 2 (한 문제 풀기) 완료. 다음은 Phase 3 월드 1 전체.
+Phase 3 (월드 1 전체) 완료. 다음은 Phase 4 저장과 월드맵.

@@ -90,3 +90,34 @@ export function josaOf(word: string, pair: JosaPair): string {
 
   return final.has ? forms[0] : forms[1]
 }
+
+const SINO_DIGITS = ['영', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'] as const
+const SINO_UNITS = ['', '십', '백', '천'] as const
+
+/**
+ * 수를 한자어로 읽는다. 342 → 삼백사십이
+ *
+ * 앞에 붙는 '일'은 읽지 않는다. 100 은 '일백'이 아니라 '백', 10 은 '십'이다.
+ * 0인 자리는 건너뛴다. 305 → 삼백오
+ * 0~9999 만 다룬다. 그 밖의 수는 이 게임에 나오지 않는다.
+ */
+export function readNumberKo(value: number): string {
+  if (!Number.isInteger(value) || value < 0 || value > 9999) {
+    throw new Error(`0~9999 사이의 정수만 읽을 수 있다: ${String(value)}`)
+  }
+  if (value === 0) return '영'
+
+  const digits = String(value).split('').map(Number)
+  let text = ''
+
+  digits.forEach((digit, index) => {
+    if (digit === 0) return
+    const unitIndex = digits.length - 1 - index
+    const unit = SINO_UNITS[unitIndex] ?? ''
+    // 십·백·천 앞의 1은 읽지 않는다. 일의 자리 1은 읽는다.
+    const head = digit === 1 && unitIndex > 0 ? '' : (SINO_DIGITS[digit] ?? '')
+    text += `${head}${unit}`
+  })
+
+  return text
+}

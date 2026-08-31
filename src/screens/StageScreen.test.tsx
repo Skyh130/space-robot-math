@@ -1,79 +1,169 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { StageScreen } from './StageScreen'
+import { world1Templates } from '../data/world1'
+import { templatesFor, worldById } from '../data/worlds'
+import { buildStage, stageSeed, type Question } from '../engine'
+import { StageScreen, type StageOutcome } from './StageScreen'
 
 const key = (name: string) => screen.getByRole('button', { name })
 
-async function answer(user: ReturnType<typeof userEvent.setup>, digits: string) {
-  for (const digit of digits) {
-    await user.click(key(digit))
-  }
+/** 숫자패드로 답을 넣는다. */
+async function typeAnswer(user: ReturnType<typeof userEvent.setup>, value: string) {
+  for (const digit of value) await user.click(key(digit))
   await user.click(key('확인'))
 }
 
-describe('StageScreen — 한 문제 풀기', () => {
-  it('문제가 화면에 뜬다', () => {
-    render(<StageScreen />)
-    expect(screen.getByText('4 × □ = 28')).toBeInTheDocument()
+/** 지금 화면의 문제를 무조건 맞힌다. 입력 방식에 맞춰 알아서 누른다. */
+async function solve(user: ReturnType<typeof userEvent.setup>, question: Question) {
+  if (question.inputType === 'choice') {
+    await user.click(key(String(question.answer)))
+    return
+  }
+  if (question.inputType === 'order') {
+    for (const value of question.answer as number[]) {
+      await user.click(key(String(value)))
+    }
+    await user.click(key('확인'))
+    return
+  }
+  await typeAnswer(user, String(question.answer))
+}
+
+function makeStage(count = 3): Question[] {
+  return buildStage([world1Templates[1] as never], 7, { count })
+}
+
+describe('StageScreen — 스테이지 진행', () => {
+  it('첫 문제부터 보여준다', () => {
+    const questions = makeStage()
+    render(<StageScreen questions={questions} label="숫자 소행성대 · 2단계" onFinish={vi.fn()} />)
+    expect(screen.getByText(questions[0]?.prompt ?? '')).toBeInTheDocument()
+    expect(screen.getByText('숫자 소행성대 · 2단계')).toBeInTheDocument()
   })
 
-  it('정답을 넣으면 칭찬이 나온다', async () => {
-    const user = userEvent.setup()
-    render(<StageScreen />)
-
-    await answer(user, '7')
-    expect(screen.getByText('잘했어!')).toBeInTheDocument()
+  it('남은 문제 수를 점으로 보여준다. 시간은 보여주지 않는다', () => {
+    render(<StageScreen questions={makeStage(8)} label="x" onFinish={vi.fn()} />)
+    expect(screen.getByLabelText('8문제 중 1번째')).toBeInTheDocument()
   })
 
-  it('오답을 넣으면 정답과 한 줄 이유와 그림 힌트가 함께 나온다', async () => {
+  it('다 맞히면 정답 수를 세어 끝난다', async () => {
     const user = userEvent.setup()
-    render(<StageScreen />)
+    const questions = makeStage(3)
+    const onFinish = vi.fn()
+    render(<StageScreen questions={questions} label="x" onFinish={onFinish} />)
 
-    await answer(user, '6')
+    for (const question of questions) {
+      await solve(user, question)
+      await user.click(key('다음'))
+    }
+
+    expect(onFinish).toHaveBeenCalledOnce()
+    const outcome = onFinish.mock.calls[0]?.[0] as StageOutcome
+    expect(outcome.correct).toBe(3)
+    expect(outcome.total).toBe(3)
+    expect(outcome.missed).toHaveLength(0)
+  })
+
+  it('첫 시도에 틀리면 다시 맞혀도 점수로 세지 않는다', async () => {
+    const user = userEvent.setup()
+    const questions = makeStage(2)
+    const onFinish = vi.fn()
+    render(<StageScreen questions={questions} label="x" onFinish={onFinish} />)
+
+    // 첫 문제는 일부러 틀린 보기를 누른다
+    const first = questions[0] as Question
+    const wrong = (first.choices ?? []).find((c) => String(c) !== String(first.answer))
+    await user.click(key(String(wrong)))
     expect(screen.getByText('아까워! 다시 볼까?')).toBeInTheDocument()
-    expect(screen.getByText('4단을 순서대로 세어 볼까?')).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: '4씩 7묶음을 세는 그림' })).toBeInTheDocument()
+
+    await user.click(key('다시 하기'))
+    await solve(user, first)
+    await user.click(key('다음'))
+
+    await solve(user, questions[1] as Question)
+    await user.click(key('다음'))
+
+    const outcome = onFinish.mock.calls[0]?.[0] as StageOutcome
+    expect(outcome.correct).toBe(1)
+    expect(outcome.missed).toHaveLength(1)
+    expect(outcome.missed[0]?.id).toBe(first.id)
   })
 
-  it('오답 뒤 다시 하기를 누르면 빈 상태로 돌아가 다시 풀 수 있다', async () => {
+  it('오답이면 그림 힌트가 함께 나온다', async () => {
     const user = userEvent.setup()
-    render(<StageScreen />)
+    const questions = makeStage(1)
+    render(<StageScreen questions={questions} label="x" onFinish={vi.fn()} />)
 
-    await answer(user, '6')
-    await user.click(key('다시 하기'))
+    const first = questions[0] as Question
+    const wrong = (first.choices ?? []).find((c) => String(c) !== String(first.answer))
+    await user.click(key(String(wrong)))
 
-    expect(screen.getByLabelText('내가 쓴 답')).toHaveTextContent('여기에 답을 써 줘')
-    await answer(user, '7')
+    expect(screen.getByText(first.hint)).toBeInTheDocument()
+    // 자릿값 표가 뜬다
+    expect(screen.getByText('백')).toBeInTheDocument()
+  })
+
+  it('영역별 정답 기록을 남긴다', async () => {
+    const user = userEvent.setup()
+    const questions = makeStage(2)
+    const onFinish = vi.fn()
+    render(<StageScreen questions={questions} label="x" onFinish={onFinish} />)
+
+    for (const question of questions) {
+      await solve(user, question)
+      await user.click(key('다음'))
+    }
+
+    const outcome = onFinish.mock.calls[0]?.[0] as StageOutcome
+    expect(outcome.skillLog).toHaveLength(2)
+    expect(outcome.skillLog[0]?.skill).toBe('place_value')
+  })
+})
+
+describe('StageScreen — 입력 방식', () => {
+  it('순서 배열 문제는 눌러서 차례를 만든다', async () => {
+    const user = userEvent.setup()
+    const world = worldById(1)
+    const questions = buildStage(templatesFor(world, 'boss'), stageSeed(1, 'boss', 0), { count: 1 })
+    const onFinish = vi.fn()
+    render(<StageScreen questions={questions} label="보스" onFinish={onFinish} />)
+
+    const question = questions[0] as Question
+    const answer = question.answer as number[]
+
+    // 다 고르기 전에는 확인을 누를 수 없다
+    expect(key('확인')).toBeDisabled()
+
+    for (const value of answer) await user.click(key(String(value)))
+    await user.click(key('확인'))
     expect(screen.getByText('잘했어!')).toBeInTheDocument()
   })
 
-  it('몇 번을 틀려도 문제가 사라지거나 벌을 주지 않는다', async () => {
+  it('순서를 잘못 골라도 되돌리기로 고칠 수 있다', async () => {
     const user = userEvent.setup()
-    render(<StageScreen />)
+    const world = worldById(1)
+    const questions = buildStage(templatesFor(world, 'boss'), stageSeed(1, 'boss', 3), { count: 1 })
+    render(<StageScreen questions={questions} label="보스" onFinish={vi.fn()} />)
 
-    for (const wrong of ['1', '2', '3', '9']) {
-      await answer(user, wrong)
-      expect(screen.getByText('아까워! 다시 볼까?')).toBeInTheDocument()
-      await user.click(key('다시 하기'))
-      expect(screen.getByText('4 × □ = 28')).toBeInTheDocument()
-    }
+    const answer = (questions[0] as Question).answer as number[]
+    const last = answer[answer.length - 1] as number
+
+    await user.click(key(String(last)))
+    await user.click(key('되돌리기'))
+    for (const value of answer) await user.click(key(String(value)))
+    await user.click(key('확인'))
+    expect(screen.getByText('잘했어!')).toBeInTheDocument()
   })
 
-  it('피드백이 뜨는 동안에는 숫자패드가 화면을 겹치지 않는다', async () => {
+  it('숫자 입력 문제는 숫자패드로 푼다', async () => {
     const user = userEvent.setup()
-    render(<StageScreen />)
+    const world = worldById(1)
+    const questions = buildStage(templatesFor(world, 3), stageSeed(1, 3, 0), { count: 1 })
+    render(<StageScreen questions={questions} label="x" onFinish={vi.fn()} />)
 
-    await answer(user, '7')
-    expect(screen.queryByLabelText('내가 쓴 답')).not.toBeInTheDocument()
-  })
-
-  it('타이머나 남은 목숨 같은 압박 요소가 없다', () => {
-    const { container } = render(<StageScreen />)
-    const text = container.textContent ?? ''
-    for (const banned of ['초', '남은 시간', '목숨', '체력', 'HP']) {
-      expect(text, banned).not.toContain(banned)
-    }
+    await typeAnswer(user, String((questions[0] as Question).answer))
+    expect(screen.getByText('잘했어!')).toBeInTheDocument()
   })
 })

@@ -2,8 +2,27 @@
 
 export * from './types'
 export { createRng, hashSeed, type Rng } from './rng'
-export { generateQuestion, checkAnswer, isSameAnswer, type GenerateOptions } from './generator'
-export { josa, josaOf, type JosaPair } from './korean'
+export {
+  generateQuestion,
+  composeQuestion,
+  checkAnswer,
+  isSameAnswer,
+  type GenerateOptions,
+} from './generator'
+export {
+  findTemplateIssues,
+  describeIssues,
+  type TemplateIssue,
+  type ValidateOptions,
+} from './validate'
+export { josa, josaOf, readNumberKo, type JosaPair } from './korean'
+export {
+  buildStage,
+  stageSeed,
+  starsFor,
+  QUESTIONS_PER_STAGE,
+  type BuildStageOptions,
+} from './stage'
 export {
   adjacentTable,
   borrowMissed,

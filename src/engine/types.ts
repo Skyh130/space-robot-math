@@ -78,6 +78,23 @@ export type DistractorRule<S extends ParamSpec = ParamSpec> = {
 }
 
 /**
+ * 오답일 때 함께 보여줄 그림 힌트.
+ *
+ * 정답만 알려주면 다음에 또 틀린다. (설계서 6장)
+ * data/ 는 순수 데이터로 두어야 해서 JSX 가 아니라 무엇을 그릴지만 적는다.
+ * 실제 그림은 components/HintVisual.tsx 가 그린다.
+ */
+export type HintVisual =
+  /** 자릿값 표. 천·백·십·일 칸에 숫자를 넣고 한 칸을 강조한다. */
+  | { readonly kind: 'placeValue'; readonly value: number; readonly highlight?: 0 | 1 | 2 | 3 }
+  /** 두 수를 자릿값 표에 위아래로 놓고 비교한다. */
+  | { readonly kind: 'placeValueCompare'; readonly left: number; readonly right: number }
+  /** 수직선 위에 수를 늘어놓고 한 칸을 강조한다. */
+  | { readonly kind: 'numberLine'; readonly values: readonly number[]; readonly highlight?: number }
+  /** ○를 묶음으로 늘어놓고 누적 수를 적는다. 곱셈·뛰어 세기용. */
+  | { readonly kind: 'dotGroups'; readonly step: number; readonly times: number }
+
+/**
  * 문제 템플릿.
  *
  * render / answer / hint 는 모두 순수 함수여야 한다.
@@ -108,6 +125,9 @@ export type QuestionTemplate<S extends ParamSpec = ParamSpec> = {
 
   /** 틀렸을 때 보여줄 한 줄 이유. 정답만 던지고 넘어가지 않는다. */
   readonly hint: (params: ParamsOf<S>) => string
+
+  /** 한 줄 이유와 함께 보여줄 그림 힌트. */
+  readonly hintVisual?: (params: ParamsOf<S>) => HintVisual
 
   /** 4지선다용 오답 보기 규칙. inputType 이 'choice' 면 반드시 있어야 한다. */
   readonly distractors?: readonly DistractorRule<S>[]
@@ -147,6 +167,7 @@ export type Question = {
   /** 4지선다일 때의 보기. 정답 하나와 실수 기반 오답들이 섞여 있다. */
   readonly choices?: readonly AnswerValue[]
   readonly hint: string
+  readonly hintVisual?: HintVisual
 }
 
 /** 채점 결과. */

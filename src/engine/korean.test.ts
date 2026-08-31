@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { josa, josaOf } from './korean'
+import { josa, josaOf, readNumberKo } from './korean'
 
 describe('josa — 숫자', () => {
   it('받침이 있는 숫자에는 이/은/을/과를 붙인다', () => {
@@ -97,5 +97,56 @@ describe('josaOf', () => {
     expect(josaOf('7', '이야/야')).toBe('이야')
     expect(josaOf('4', '이야/야')).toBe('야')
     expect(josaOf('5', '이/가')).toBe('가')
+  })
+})
+
+describe('readNumberKo', () => {
+  it('한 자리 수', () => {
+    expect(readNumberKo(0)).toBe('영')
+    expect(readNumberKo(1)).toBe('일')
+    expect(readNumberKo(7)).toBe('칠')
+  })
+
+  it('십 자리 앞의 1은 읽지 않는다', () => {
+    expect(readNumberKo(10)).toBe('십')
+    expect(readNumberKo(15)).toBe('십오')
+    expect(readNumberKo(20)).toBe('이십')
+    expect(readNumberKo(47)).toBe('사십칠')
+  })
+
+  it('세 자리 수', () => {
+    expect(readNumberKo(100)).toBe('백')
+    expect(readNumberKo(342)).toBe('삼백사십이')
+    expect(readNumberKo(472)).toBe('사백칠십이')
+    expect(readNumberKo(999)).toBe('구백구십구')
+  })
+
+  it('0인 자리는 건너뛴다', () => {
+    expect(readNumberKo(305)).toBe('삼백오')
+    expect(readNumberKo(350)).toBe('삼백오십')
+    expect(readNumberKo(300)).toBe('삼백')
+    expect(readNumberKo(101)).toBe('백일')
+  })
+
+  it('네 자리 수', () => {
+    expect(readNumberKo(1000)).toBe('천')
+    expect(readNumberKo(2010)).toBe('이천십')
+    expect(readNumberKo(3042)).toBe('삼천사십이')
+    expect(readNumberKo(9999)).toBe('구천구백구십구')
+    expect(readNumberKo(1234)).toBe('천이백삼십사')
+  })
+
+  it('0~9999 밖은 거부한다', () => {
+    expect(() => readNumberKo(-1)).toThrow()
+    expect(() => readNumberKo(10000)).toThrow()
+    expect(() => readNumberKo(1.5)).toThrow()
+  })
+
+  it('모든 세 자리 수를 읽어도 깨지지 않는다', () => {
+    for (let n = 100; n <= 999; n += 1) {
+      const text = readNumberKo(n)
+      expect(text.length, String(n)).toBeGreaterThan(0)
+      expect(text, String(n)).not.toContain('undefined')
+    }
   })
 })

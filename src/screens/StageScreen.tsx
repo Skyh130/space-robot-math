@@ -2,46 +2,100 @@ import { useState } from 'react'
 
 import { ChoiceGrid } from '../components/ChoiceGrid'
 import { Feedback } from '../components/Feedback'
+import { HintVisualView } from '../components/HintVisual'
 import { NumPad } from '../components/NumPad'
+import { OrderPicker } from '../components/OrderPicker'
+import { ProgressDots } from '../components/ProgressDots'
 import { QuestionCard } from '../components/QuestionCard'
-import { checkAnswer, type AnswerResult, type AnswerValue, type Question } from '../engine'
+import {
+  checkAnswer,
+  type AnswerResult,
+  type AnswerScalar,
+  type AnswerValue,
+  type Question,
+  type SkillKey,
+} from '../engine'
 
-/**
- * 문제를 푸는 화면.
- *
- * Phase 2는 하드코딩한 문제 하나를 끝까지 푸는 것까지다.
- * 스테이지 8문제 연결과 진행 인디케이터는 Phase 3에서 붙인다.
- */
-
-/** Phase 2용 하드코딩 문제. 설계서 5장 W3 Lv4 모양이다. */
-const DEMO_QUESTION: Question = {
-  id: 'demo_w3_lv4#0001',
-  templateId: 'demo_w3_lv4',
-  world: 3,
-  level: 4,
-  skill: 'multiplication_blank',
-  inputType: 'numpad',
-  prompt: '4 × □ = 28',
-  params: { a: 4, b: 7 },
-  answer: 7,
-  hint: '4단을 순서대로 세어 볼까?',
+export type StageOutcome = {
+  readonly correct: number
+  readonly total: number
+  /** 영역별 정답 기록. 부모 대시보드와 복습 편성의 근거가 된다. (설계서 8장) */
+  readonly skillLog: readonly { readonly skill: SkillKey; readonly correct: boolean }[]
+  /** 첫 시도에 틀린 문제. 세션 안 재출제와 다음 세션 복습에 쓴다. */
+  readonly missed: readonly Question[]
 }
 
-export function StageScreen() {
+type StageScreenProps = {
+  questions: readonly Question[]
+  /** "숫자 소행성대 · 2단계" 처럼 지금 어디인지 알려 준다. */
+  label: string
+  onFinish: (outcome: StageOutcome) => void
+}
+
+/**
+ * 스테이지 한 판. 문제 8개를 차례로 푼다.
+ *
+ * 점수는 첫 시도만 센다. 틀리면 정답과 힌트를 보여주고 다시 풀게 하는데,
+ * 이 재시도까지 점수에 넣으면 누구나 8개를 다 맞아 별이 뜻을 잃는다.
+ * 재시도는 점수가 아니라 배우기 위한 것이다.
+ */
+export function StageScreen({ questions, label, onFinish }: StageScreenProps) {
+  const [index, setIndex] = useState(0)
   const [typed, setTyped] = useState('')
   const [result, setResult] = useState<AnswerResult | null>(null)
+  const [firstTry, setFirstTry] = useState(true)
+  const [log, setLog] = useState<StageOutcome['skillLog']>([])
+  const [missed, setMissed] = useState<Question[]>([])
 
-  const question = DEMO_QUESTION
+  const question = questions[index]
+  if (!question) {
+    throw new Error('문제가 없는 스테이지다.')
+  }
 
-  const submit = (given: AnswerValue) => setResult(checkAnswer(question, given))
+  const correctIndexes = log
+    .map((entry, at) => (entry.correct ? at : -1))
+    .filter((at) => at >= 0)
 
-  const reset = () => {
+  const submit = (given: AnswerValue) => {
+    const outcome = checkAnswer(question, given)
+    setResult(outcome)
+
+    if (firstTry) {
+      setLog([...log, { skill: question.skill, correct: outcome.correct }])
+      if (!outcome.correct) setMissed([...missed, question])
+    }
+    setFirstTry(false)
+  }
+
+  const retry = () => {
     setResult(null)
     setTyped('')
   }
 
+  const next = () => {
+    const done = index + 1 >= questions.length
+    if (done) {
+      onFinish({
+        correct: log.filter((entry) => entry.correct).length,
+        total: questions.length,
+        skillLog: log,
+        missed,
+      })
+      return
+    }
+    setIndex(index + 1)
+    setTyped('')
+    setResult(null)
+    setFirstTry(true)
+  }
+
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4">
+    <div className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
+      <header className="flex flex-col items-center gap-2">
+        <p className="font-title text-base text-paper/70">{label}</p>
+        <ProgressDots total={questions.length} current={index} correct={correctIndexes} />
+      </header>
+
       <QuestionCard prompt={question.prompt} />
 
       {result === null ? (
@@ -49,9 +103,11 @@ export function StageScreen() {
       ) : (
         <Feedback
           result={result}
-          visual={result.correct ? undefined : <SkipCountHint step={4} times={7} />}
-          onRetry={reset}
-          onNext={reset}
+          {...(result.correct || question.hintVisual === undefined
+            ? {}
+            : { visual: <HintVisualView visual={question.hintVisual} /> })}
+          onRetry={retry}
+          onNext={next}
         />
       )}
     </div>
@@ -69,69 +125,34 @@ function InputArea({
   onTyped: (next: string) => void
   onSubmit: (given: AnswerValue) => void
 }) {
-  if (question.inputType === 'choice') {
-    return <ChoiceGrid choices={question.choices ?? []} onPick={onSubmit} />
+  switch (question.inputType) {
+    case 'choice':
+      return <ChoiceGrid choices={question.choices ?? []} onPick={onSubmit} />
+    case 'order':
+      return (
+        <OrderPicker
+          // 문제가 바뀌면 고른 순서를 비운다
+          key={question.id}
+          items={orderItems(question)}
+          onSubmit={(order) => onSubmit(order)}
+        />
+      )
+    default:
+      return <NumPad value={typed} onChange={onTyped} onSubmit={() => onSubmit(typed)} />
   }
-  return <NumPad value={typed} onChange={onTyped} onSubmit={() => onSubmit(typed)} />
 }
 
-/**
- * 뛰어 세기 그림 힌트.
- *
- * 답만 알려주면 다음에 또 틀린다. 4씩 묶음을 늘어놓고 세어 가는 방법을 보여준다.
- * (설계서 6장 오답 시 그림 힌트)
- */
-function SkipCountHint({ step, times }: { step: number; times: number }) {
-  const box = 30
-  const gap = 6
-  const width = times * box + (times - 1) * gap
-  const height = box + 20
+/** 순서 배열 문제에서 아이가 누를 조각들. 정답 순서 그대로 주면 답이 보이므로 섞는다. */
+function orderItems(question: Question): readonly AnswerScalar[] {
+  const answer = question.answer
+  if (!Array.isArray(answer)) return []
+  // 문제 문장에 적힌 순서 그대로 보여준다
+  const lines = question.prompt.split('\n')
+  const shown = lines[lines.length - 1] ?? ''
+  const parsed = shown
+    .split(',')
+    .map((piece) => Number(piece.trim()))
+    .filter((value) => Number.isFinite(value))
 
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className="h-auto w-full"
-      role="img"
-      aria-label={`${step}씩 ${times}묶음을 세는 그림`}
-    >
-      {Array.from({ length: times }, (_, index) => {
-        const x = index * (box + gap)
-        return (
-          <g key={index}>
-            <rect
-              x={x}
-              y={0}
-              width={box}
-              height={box}
-              rx={6}
-              fill="#FFF6E5"
-              stroke="#101838"
-              strokeWidth={2}
-            />
-            {Array.from({ length: step }, (_, dot) => (
-              <circle
-                key={dot}
-                cx={x + 9 + (dot % 2) * 12}
-                cy={9 + Math.floor(dot / 2) * 12}
-                r={3.5}
-                fill="#4FD1C5"
-                stroke="#101838"
-                strokeWidth={1.5}
-              />
-            ))}
-            <text
-              x={x + box / 2}
-              y={height - 3}
-              textAnchor="middle"
-              fontSize={11}
-              fontWeight="bold"
-              fill="#101838"
-            >
-              {step * (index + 1)}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
-  )
+  return parsed.length === answer.length ? parsed : (answer as readonly AnswerScalar[])
 }
