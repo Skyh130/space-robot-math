@@ -167,3 +167,20 @@ describe('문장 길이', () => {
     }
   })
 })
+
+describe('통계 키 — 설계서 5장 복습 편성', () => {
+  it('7·8·9단은 따로 센다', () => {
+    // 모든 단을 한 키로 묶으면 "7·8단 정답률이 낮다"를 판단할 수 없다
+    expect(w3Lv3HardTables.skill).toBe('multiplication_table_hard')
+  })
+
+  it('쉬운 단과 어려운 단의 키가 다르다', () => {
+    expect(w3Lv1EasyTables.skill).not.toBe(w3Lv3HardTables.skill)
+    expect(w3Lv2MiddleTables.skill).not.toBe(w3Lv3HardTables.skill)
+  })
+
+  it('문장제는 계산과 다른 키로 센다', () => {
+    expect(w3Lv5WordAnswer.skill).toBe('word_problem_multiply')
+    expect(w3Lv5WordEquation.skill).toBe('word_problem_multiply')
+  })
+})

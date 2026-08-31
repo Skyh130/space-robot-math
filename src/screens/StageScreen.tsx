@@ -67,6 +67,15 @@ export function StageScreen({
 
   const timed = timeLimitSeconds !== undefined
   const finished = useRef(false)
+  // 시간을 재는 판에서 예약해 둔 자동 넘김. 화면이 사라지면 취소한다.
+  const advanceTimer = useRef<number | null>(null)
+
+  useEffect(
+    () => () => {
+      if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
+    },
+    [],
+  )
 
   const question = questions[index]
   if (!question) {
@@ -145,7 +154,10 @@ export function StageScreen({
 
     // 시간을 재는 판에서는 손을 멈추게 두지 않는다. 잠깐 보여주고 넘어간다.
     if (timed) {
-      window.setTimeout(() => goNext(entries, missedNow), TIMED_FEEDBACK_MS)
+      advanceTimer.current = window.setTimeout(() => {
+        advanceTimer.current = null
+        if (!finished.current) goNext(entries, missedNow)
+      }, TIMED_FEEDBACK_MS)
     }
   }
 

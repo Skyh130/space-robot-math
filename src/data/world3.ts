@@ -106,7 +106,8 @@ export const w3Lv3HardTables: AnyQuestionTemplate = defineTemplate({
   id: 'w3_lv3_hard',
   world: 3,
   level: 3,
-  skill: 'multiplication_table',
+  // 7·8·9단은 따로 센다. 설계서 5장의 복습 편성 기준이다.
+  skill: 'multiplication_table_hard',
   inputType: 'numpad',
   params: { aKind: [0, 2], b: [2, 9] },
   render: (p) => `${pickTable(HARD_TABLES, p.aKind)} × ${p.b} = ?`,
@@ -168,7 +169,7 @@ export const w3Lv5WordAnswer: AnyQuestionTemplate = defineTemplate({
   inputType: 'numpad',
   params: { a: [2, 9], b: [2, 9], box: [0, 2], item: [0, 2] },
   render: (p) =>
-    `${boxName(p.box)} ${p.a}개에\n${itemName(p.item)}가 ${p.b}개씩 있어.\n모두 몇 개?`,
+    `${boxName(p.box)} ${p.a}개에\n${josa(itemName(p.item), '이/가')} ${p.b}개씩 있어.\n모두 몇 개?`,
   answer: (p) => p.a * p.b,
   hint: (p) => `${p.b}개씩 ${p.a}묶음이야.`,
   hintVisual: (p) => groupsVisual(p.b, p.a),

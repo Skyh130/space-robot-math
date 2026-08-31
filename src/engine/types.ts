@@ -38,6 +38,11 @@ export type SkillKey =
   | 'word_problem_add_sub'
   // W3 에너지 코어 공장
   | 'multiplication_table'
+  /**
+   * 7·8·9단만 따로 센다. 설계서 5장이 "7·8단 정답률이 낮으면 다음 세션 복습으로
+   * 자동 편성"하라고 못 박았는데, 모든 단을 한 키로 묶으면 그 판단을 할 수 없다.
+   */
+  | 'multiplication_table_hard'
   | 'multiplication_blank'
   | 'word_problem_multiply'
 

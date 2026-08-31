@@ -339,7 +339,7 @@ export const w1Lv5MakeNumber: AnyQuestionTemplate = defineTemplate({
   render: (p) => {
     const cards = [p.c1, p.c2, p.c3].join(', ')
     const goal = p.want === 1 ? '가장 큰' : '가장 작은'
-    return `숫자 카드 ${cards}\n${goal} 세 자리 수를 만들면?`
+    return `숫자 카드\n${cards}\n${goal} 세 자리 수는?`
   },
   answer: (p) => {
     const cards = [p.c1, p.c2, p.c3].sort((left, right) =>

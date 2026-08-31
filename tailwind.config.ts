@@ -32,6 +32,8 @@ export default {
         // 설계서 UX 규격: 문제 텍스트 20px 이상, 숫자 32px 이상
         question: ['1.375rem', { lineHeight: '1.5' }], // 22px
         number: ['2.25rem', { lineHeight: '1.2' }], // 36px
+        // 수가 길게 늘어선 줄용. 36px 로는 작은 폰에서 줄이 넘어간다.
+        'number-tight': ['1.75rem', { lineHeight: '1.25' }], // 28px
       },
       borderWidth: {
         3: '3px',
