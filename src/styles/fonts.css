@@ -1,0 +1,39 @@
+/*
+ * 폰트는 오프라인 동작을 위해 public/fonts 에 자체 호스팅한다. (설계서 7장)
+ * Pretendard, Jua 모두 SIL Open Font License 1.1 — public/fonts/*-LICENSE.txt 참고.
+ * 제목: Jua / 본문·숫자: Pretendard
+ */
+
+@font-face {
+  font-family: 'Pretendard';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Pretendard-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/Pretendard-Bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Jua';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Jua-Latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+2000-206F, U+2070-209F, U+20A0-20AB, U+20AD-20CF;
+}
+
+@font-face {
+  font-family: 'Jua';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Jua-Korean.woff2') format('woff2');
+  unicode-range: U+1100-11FF, U+3130-318F, U+A960-A97F, U+AC00-D7A3, U+D7B0-D7FF;
+}

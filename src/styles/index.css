@@ -1,0 +1,76 @@
+@import './fonts.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* CLAUDE.md 비주얼 방향의 컬러 토큰. Tailwind 테마와 같은 값이다. */
+    --deep: #1b2a6b;
+    --panel: #2c3e8f;
+    --energy: #ffc93c;
+    --coral: #ff6b5b;
+    --mint: #4fd1c5;
+    --paper: #fff6e5;
+    --outline: #101838;
+  }
+
+  html {
+    /* 브라우저 기본 확대/축소와 텍스트 자동 확대를 막는다 */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--deep);
+    color: var(--paper);
+    font-family: 'Pretendard', system-ui, sans-serif;
+    /* 2학년이 읽는 글이다. 기본 크기를 크게 잡는다. */
+    font-size: 18px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    /* 더블탭 확대와 당겨서 새로고침을 막아 문제 풀이 흐름을 끊지 않는다 */
+    touch-action: manipulation;
+    overscroll-behavior: none;
+  }
+
+  /* 자릿수가 흔들리면 계산 문제를 읽기 어렵다 */
+  body,
+  input,
+  button {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 게임 화면에서 글자가 잡혀 끌리면 오조작이 된다 */
+  button,
+  [role='button'] {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+}
+
+@layer utilities {
+  .font-title {
+    font-family: 'Jua', 'Pretendard', sans-serif;
+  }
+}
+
+/* 설계서 UX 규격: prefers-reduced-motion 존중 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
