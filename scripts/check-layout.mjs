@@ -25,6 +25,8 @@ const DEVICES = [
 /** 검사할 화면들. harness.html?screen= 값과 같다. */
 const SCREENS = [
   { name: '제목', screen: 'title' },
+  { name: '월드맵', screen: 'map' },
+  { name: '단계 목록', screen: 'stages' },
   { name: 'Lv1 4지선다', screen: '1' },
   { name: 'Lv2 자릿값', screen: '2' },
   { name: 'Lv3 숫자패드', screen: '3' },

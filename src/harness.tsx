@@ -8,6 +8,8 @@ import { buildStage, checkAnswer, stageSeed, type StageLevel } from './engine'
 import { Feedback } from './components/Feedback'
 import { QuestionCard } from './components/QuestionCard'
 import { ResultScreen } from './screens/ResultScreen'
+import { WorldMapScreen } from './screens/WorldMapScreen'
+import { defaultSave, recordStage } from './state/save'
 import { StageScreen } from './screens/StageScreen'
 import { TitleScreen } from './screens/TitleScreen'
 import './styles/index.css'
@@ -28,7 +30,38 @@ function stageAt(level: StageLevel) {
   return buildStage(templatesFor(world, level), stageSeed(world.id, level, 0))
 }
 
+/** 몇 판 해 본 저장. 잠금이 풀린 모습과 별이 붙은 모습을 함께 본다. */
+function playedSave() {
+  let save = defaultSave()
+  save = recordStage(save, { world: 1, level: 1, stars: 3, correct: 8, skillLog: [] })
+  save = recordStage(save, { world: 1, level: 2, stars: 2, correct: 7, skillLog: [] })
+  save = recordStage(save, { world: 1, level: 3, stars: 0, correct: 4, skillLog: [] })
+  return save
+}
+
 function View() {
+  if (screen === 'map') {
+    return (
+      <WorldMapScreen
+        save={playedSave()}
+        openWorld={null}
+        onOpenWorld={() => undefined}
+        onPlay={() => undefined}
+      />
+    )
+  }
+
+  if (screen === 'stages') {
+    return (
+      <WorldMapScreen
+        save={playedSave()}
+        openWorld={1}
+        onOpenWorld={() => undefined}
+        onPlay={() => undefined}
+      />
+    )
+  }
+
   if (screen === 'title') {
     return <TitleScreen onStart={() => undefined} />
   }
@@ -41,6 +74,7 @@ function View() {
         earnedPart={world.partName}
         onRetry={() => undefined}
         onNext={() => undefined}
+        onMap={() => undefined}
       />
     )
   }

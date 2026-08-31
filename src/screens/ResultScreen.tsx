@@ -8,6 +8,8 @@ type ResultScreenProps = {
   earnedPart?: string
   onRetry: () => void
   onNext: () => void
+  /** 월드맵으로 돌아가기. 없으면 버튼을 그리지 않는다. */
+  onMap?: () => void
   /** 다음으로 갈 곳의 이름. "다음 단계" 또는 "격납고" 처럼 동작 그대로 쓴다. */
   nextLabel?: string
 }
@@ -23,6 +25,7 @@ export function ResultScreen({
   earnedPart,
   onRetry,
   onNext,
+  onMap,
   nextLabel = '다음 단계',
 }: ResultScreenProps) {
   const stars = starsFor(correct, total)
@@ -68,6 +71,19 @@ export function ResultScreen({
         >
           다시 하기
         </button>
+        {onMap === undefined ? null : (
+          <button
+            type="button"
+            onClick={onMap}
+            className="
+              min-h-touch w-full rounded-2xl border-3 border-outline bg-mint px-4 py-3
+              font-title text-xl text-outline shadow-hard transition-transform
+              active:translate-y-1 active:shadow-none
+            "
+          >
+            우주로
+          </button>
+        )}
       </div>
     </div>
   )

@@ -2,74 +2,109 @@ import { useState } from 'react'
 
 import { AppShell } from './components/AppShell'
 import { STAGE_ORDER, templatesFor, worldById } from './data/worlds'
-import { buildStage, stageSeed, type StageLevel } from './engine'
+import { buildStage, stageSeed, starsFor, type StageLevel, type WorldId } from './engine'
 import { ResultScreen } from './screens/ResultScreen'
 import { StageScreen, type StageOutcome } from './screens/StageScreen'
 import { TitleScreen } from './screens/TitleScreen'
+import { WorldMapScreen } from './screens/WorldMapScreen'
+import { playsOf } from './state/save'
+import { ProgressProvider, useProgress } from './state/useProgress'
 
 /**
- * Phase 3 기준 화면 흐름.
+ * 화면 흐름.
  *
- * 제목 → 월드 1 의 Lv1 … Lv5 → 보스 → 제목
- * 월드맵과 저장은 Phase 4 에서 붙인다.
+ * 제목 → 월드맵 → (행성) 단계 목록 → 스테이지 → 결과 → 단계 목록
+ * 격납고는 Phase 6 에서 붙인다.
  */
 type Route =
   | { name: 'title' }
-  | { name: 'stage'; level: StageLevel; attempt: number }
-  | { name: 'result'; level: StageLevel; attempt: number; outcome: StageOutcome }
+  | { name: 'map'; openWorld: WorldId | null }
+  | { name: 'stage'; world: WorldId; level: StageLevel; attempt: number }
+  | { name: 'result'; world: WorldId; level: StageLevel; attempt: number; outcome: StageOutcome }
 
-const WORLD = worldById(1)
-
-export default function App() {
-  const [route, setRoute] = useState<Route>({ name: 'title' })
-
+export default function App({ storage }: { storage?: Storage }) {
   return (
-    <AppShell>
-      <Router route={route} onNavigate={setRoute} />
-    </AppShell>
+    <ProgressProvider {...(storage === undefined ? {} : { storage })}>
+      <AppShell>
+        <Router />
+      </AppShell>
+    </ProgressProvider>
   )
 }
 
-function Router({ route, onNavigate }: { route: Route; onNavigate: (next: Route) => void }) {
+function Router() {
+  const { save, finishStage } = useProgress()
+  const [route, setRoute] = useState<Route>({ name: 'title' })
+
   if (route.name === 'title') {
-    return <TitleScreen onStart={() => onNavigate({ name: 'stage', level: 1, attempt: 0 })} />
+    return <TitleScreen onStart={() => setRoute({ name: 'map', openWorld: null })} />
   }
 
-  if (route.name === 'stage') {
-    const templates = templatesFor(WORLD, route.level)
-    const questions = buildStage(templates, stageSeed(WORLD.id, route.level, route.attempt))
+  if (route.name === 'map') {
     return (
-      <StageScreen
-        // 스테이지가 바뀌면 진행 상태를 처음부터 다시 잡는다
-        key={`${String(route.level)}-${String(route.attempt)}`}
-        questions={questions}
-        label={`${WORLD.name} · ${levelLabel(route.level)}`}
-        onFinish={(outcome) =>
-          onNavigate({ name: 'result', level: route.level, attempt: route.attempt, outcome })
+      <WorldMapScreen
+        save={save}
+        openWorld={route.openWorld}
+        onOpenWorld={(world) => setRoute({ name: 'map', openWorld: world })}
+        onPlay={(world, level) =>
+          setRoute({ name: 'stage', world, level, attempt: playsOf(save, world, level) })
         }
       />
     )
   }
 
-  const isBoss = route.level === 'boss'
+  if (route.name === 'stage') {
+    const world = worldById(route.world)
+    const questions = buildStage(
+      templatesFor(world, route.level),
+      stageSeed(world.id, route.level, route.attempt),
+    )
+    return (
+      <StageScreen
+        key={`${String(route.world)}-${String(route.level)}-${String(route.attempt)}`}
+        questions={questions}
+        label={`${world.name} · ${levelLabel(route.level)}`}
+        onFinish={(outcome) => {
+          const stars = starsFor(outcome.correct, outcome.total)
+          finishStage({
+            world: route.world,
+            level: route.level,
+            stars,
+            correct: outcome.correct,
+            skillLog: outcome.skillLog,
+            ...(route.level === 'boss' ? { part: world.part } : {}),
+          })
+          setRoute({ ...route, name: 'result', outcome })
+        }}
+      />
+    )
+  }
+
+  const world = worldById(route.world)
+  const stars = starsFor(route.outcome.correct, route.outcome.total)
   const nextLevel = STAGE_ORDER[STAGE_ORDER.indexOf(route.level) + 1]
+  const gotPart = route.level === 'boss' && stars >= 1
 
   return (
     <ResultScreen
       correct={route.outcome.correct}
       total={route.outcome.total}
-      {...(isBoss && route.outcome.correct > 0 ? { earnedPart: WORLD.partName } : {})}
-      nextLabel={nextLevel === undefined ? '처음으로' : '다음 단계'}
-      onRetry={() =>
-        onNavigate({ name: 'stage', level: route.level, attempt: route.attempt + 1 })
-      }
+      {...(gotPart ? { earnedPart: world.partName } : {})}
+      nextLabel={nextLevel === undefined ? '우주로' : '다음 단계'}
+      onRetry={() => setRoute({ name: 'stage', world: route.world, level: route.level, attempt: route.attempt + 1 })}
       onNext={() =>
-        onNavigate(
+        setRoute(
           nextLevel === undefined
-            ? { name: 'title' }
-            : { name: 'stage', level: nextLevel, attempt: 0 },
+            ? { name: 'map', openWorld: route.world }
+            : {
+                name: 'stage',
+                world: route.world,
+                level: nextLevel,
+                attempt: playsOf(save, route.world, nextLevel),
+              },
         )
       }
+      {...(nextLevel === undefined ? {} : { onMap: () => setRoute({ name: 'map', openWorld: route.world }) })}
     />
   )
 }
