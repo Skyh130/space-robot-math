@@ -8,6 +8,13 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      screens: {
+        /*
+         * 터치 기기를 가로로 눕혔을 때만 회전 안내를 띄운다.
+         * pointer:coarse 조건이 없으면 노트북 브라우저에서도 계속 뜬다.
+         */
+        rotated: { raw: '(orientation: landscape) and (pointer: coarse)' },
+      },
       colors: {
         deep: '#1B2A6B', // 우주 배경
         panel: '#2C3E8F', // 패널

@@ -14,6 +14,15 @@ describe('AppShell', () => {
     expect(screen.getByText('출발!')).toBeInTheDocument()
   })
 
+  it('가로로 눕혔을 때 쓸 회전 안내를 함께 그린다', () => {
+    render(
+      <AppShell>
+        <p>내용</p>
+      </AppShell>,
+    )
+    expect(screen.getByText('화면을 세로로 돌려줘!')).toBeInTheDocument()
+  })
+
   it('태블릿에서 중앙 정렬되도록 최대 폭을 제한한다', () => {
     const { container } = render(
       <AppShell>
