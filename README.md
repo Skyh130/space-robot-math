@@ -34,4 +34,4 @@ Tailwind는 3.x를 쓴다. 4.x는 Safari 16.4 / Chrome 111 이상을 요구해�
 
 ## 진행 상황
 
-Phase 0 (프로젝트 셋업) 완료. 다음은 Phase 1 문제 엔진.
+Phase 1 (문제 엔진) 완료. 다음은 Phase 2 한 문제 풀기.
