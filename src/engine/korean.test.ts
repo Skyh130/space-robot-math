@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { josa } from './korean'
+import { josa, josaOf } from './korean'
 
 describe('josa — 숫자', () => {
   it('받침이 있는 숫자에는 이/은/을/과를 붙인다', () => {
@@ -75,5 +75,27 @@ describe('josa — 가장자리', () => {
 
   it('뒤에 붙은 공백은 무시한다', () => {
     expect(josa('5 ', '이/가')).toBe('5 가')
+  })
+})
+
+describe('josa — 서술격 이야/야', () => {
+  it('받침이 있으면 이야를 쓴다', () => {
+    expect(josa('7', '이야/야')).toBe('7이야') // 칠
+    expect(josa('28', '이야/야')).toBe('28이야') // 팔
+    expect(josa('로봇', '이야/야')).toBe('로봇이야')
+  })
+
+  it('받침이 없으면 야를 쓴다', () => {
+    expect(josa('4', '이야/야')).toBe('4야') // 사
+    expect(josa('62', '이야/야')).toBe('62야') // 이
+    expect(josa('사과', '이야/야')).toBe('사과야')
+  })
+})
+
+describe('josaOf', () => {
+  it('조사만 돌려준다', () => {
+    expect(josaOf('7', '이야/야')).toBe('이야')
+    expect(josaOf('4', '이야/야')).toBe('야')
+    expect(josaOf('5', '이/가')).toBe('가')
   })
 })

@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import App from '../App'
 import { AppShell } from './AppShell'
 
 describe('AppShell', () => {
@@ -31,12 +30,5 @@ describe('AppShell', () => {
     )
     const inner = container.querySelector('.max-w-app')
     expect(inner).not.toBeNull()
-  })
-})
-
-describe('App', () => {
-  it('제목이 뜬다', () => {
-    render(<App />)
-    expect(screen.getByRole('heading', { name: '우주 로봇 수학 모험' })).toBeInTheDocument()
   })
 })

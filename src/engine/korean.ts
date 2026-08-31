@@ -6,7 +6,7 @@
  * 모든 월드의 템플릿이 이 함수를 거쳐 조사를 붙인다.
  */
 
-export type JosaPair = '이/가' | '은/는' | '을/를' | '와/과' | '으로/로'
+export type JosaPair = '이/가' | '은/는' | '을/를' | '와/과' | '으로/로' | '이야/야'
 
 /** 숫자를 소리 내어 읽었을 때 마지막 음절에 받침이 있는지. 0 영, 1 일, 2 이 ... */
 const DIGIT_HAS_FINAL: Readonly<Record<string, boolean>> = {
@@ -56,6 +56,8 @@ const FORMS: Readonly<Record<JosaPair, readonly [withFinal: string, withoutFinal
   '을/를': ['을', '를'],
   '와/과': ['과', '와'],
   '으로/로': ['으로', '로'],
+  // 서술격 조사 '이다'. "답은 7이야" / "답은 4야"
+  '이야/야': ['이야', '야'],
 }
 
 /**
@@ -70,13 +72,21 @@ const FORMS: Readonly<Record<JosaPair, readonly [withFinal: string, withoutFinal
  * 받침을 알 수 없는 글자(영문·기호)는 받침이 없는 것으로 본다.
  */
 export function josa(word: string, pair: JosaPair): string {
+  return `${word}${josaOf(word, pair)}`
+}
+
+/**
+ * 조사만 돌려준다.
+ * 숫자만 크게 그리고 조사는 보통 크기로 쓸 때처럼, 둘을 따로 그려야 할 때 쓴다.
+ */
+export function josaOf(word: string, pair: JosaPair): string {
   const forms = FORMS[pair]
   const final = finalOf(word)
 
-  if (final === null) return `${word}${forms[1]}`
+  if (final === null) return forms[1]
 
   // 'ㄹ' 받침은 '으로'가 아니라 '로'를 쓴다
-  if (pair === '으로/로' && final.isRieul) return `${word}${forms[1]}`
+  if (pair === '으로/로' && final.isRieul) return forms[1]
 
-  return `${word}${final.has ? forms[0] : forms[1]}`
+  return final.has ? forms[0] : forms[1]
 }

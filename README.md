@@ -18,6 +18,18 @@ npm run build      # 프로덕션 빌드 (dist/)
 npm run preview    # 빌드 결과 확인
 ```
 
+### 화면 검사
+
+"스크롤 없이 한 화면에 문제 하나"는 눈으로만 확인할 수 없어서 스크립트로 잰다.
+실기기 뷰포트 5종에서 스크롤 발생 여부, 48px 미만 터치 타깃, 64px 미만 숫자키,
+16px 미만 글자, 화면 밖으로 나간 요소를 검사한다.
+
+```bash
+npm run build
+npm run preview &        # 4173 포트
+npm run check:layout
+```
+
 휴대폰 실기기에서 볼 때는 `npm run dev -- --host` 로 띄우고 같은 와이파이에서 접속한다.
 
 ## 기술 스택
@@ -34,4 +46,4 @@ Tailwind는 3.x를 쓴다. 4.x는 Safari 16.4 / Chrome 111 이상을 요구해�
 
 ## 진행 상황
 
-Phase 1 (문제 엔진) 완료. 다음은 Phase 2 한 문제 풀기.
+Phase 2 (한 문제 풀기) 완료. 다음은 Phase 3 월드 1 전체.

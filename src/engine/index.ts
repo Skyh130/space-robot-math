@@ -3,7 +3,7 @@
 export * from './types'
 export { createRng, hashSeed, type Rng } from './rng'
 export { generateQuestion, checkAnswer, isSameAnswer, type GenerateOptions } from './generator'
-export { josa, type JosaPair } from './korean'
+export { josa, josaOf, type JosaPair } from './korean'
 export {
   adjacentTable,
   borrowMissed,
