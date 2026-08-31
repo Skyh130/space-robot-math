@@ -1,8 +1,10 @@
 import { useState } from 'react'
 
 import { AppShell } from './components/AppShell'
-import { STAGE_ORDER, stageRuleFor, templatesFor, worldById } from './data/worlds'
+import { STAGE_ORDER, stageRuleFor, templatesFor, WORLDS, worldById } from './data/worlds'
 import { buildStage, stageSeed, starsFor, type StageLevel, type WorldId } from './engine'
+import { HangarScreen } from './screens/HangarScreen'
+import { PartRewardScreen } from './screens/PartRewardScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { StageScreen, type StageOutcome } from './screens/StageScreen'
 import { TitleScreen } from './screens/TitleScreen'
@@ -19,8 +21,18 @@ import { ProgressProvider, useProgress } from './state/useProgress'
 type Route =
   | { name: 'title' }
   | { name: 'map'; openWorld: WorldId | null }
+  | { name: 'hangar' }
   | { name: 'stage'; world: WorldId; level: StageLevel; attempt: number }
-  | { name: 'result'; world: WorldId; level: StageLevel; attempt: number; outcome: StageOutcome }
+  | { name: 'reward'; world: WorldId }
+  | {
+      name: 'result'
+      world: WorldId
+      level: StageLevel
+      attempt: number
+      outcome: StageOutcome
+      /** 이 판에서 부품을 처음 받았는지. 받았다면 결과 다음에 획득 연출이 온다. */
+      newPart: boolean
+    }
 
 export default function App({ storage }: { storage?: Storage }) {
   return (
@@ -49,6 +61,24 @@ function Router() {
         onPlay={(world, level) =>
           setRoute({ name: 'stage', world, level, attempt: playsOf(save, world, level) })
         }
+        onHangar={() => setRoute({ name: 'hangar' })}
+      />
+    )
+  }
+
+  if (route.name === 'hangar') {
+    return <HangarScreen save={save} onBack={() => setRoute({ name: 'map', openWorld: null })} />
+  }
+
+  if (route.name === 'reward') {
+    const world = worldById(route.world)
+    return (
+      <PartRewardScreen
+        part={world.part}
+        partName={world.partName}
+        parts={save.parts}
+        totalParts={WORLDS.length}
+        onContinue={() => setRoute({ name: 'hangar' })}
       />
     )
   }
@@ -71,7 +101,8 @@ function Router() {
         label={`${world.name} · ${levelLabel(route.level)}`}
         onFinish={(outcome) => {
           const stars = starsFor(outcome.correct, outcome.total, rule.starThresholds)
-          finishStage({
+          const hadPart = save.parts.includes(world.part)
+          const next = finishStage({
             world: route.world,
             level: route.level,
             stars,
@@ -79,7 +110,13 @@ function Router() {
             skillLog: outcome.skillLog,
             ...(route.level === 'boss' ? { part: world.part } : {}),
           })
-          setRoute({ ...route, name: 'result', outcome })
+          setRoute({
+            ...route,
+            name: 'result',
+            outcome,
+            // 이미 가진 부품을 또 받는 연출은 하지 않는다
+            newPart: !hadPart && next.parts.includes(world.part),
+          })
         }}
       />
     )
@@ -99,11 +136,13 @@ function Router() {
       correct={route.outcome.correct}
       total={route.outcome.total}
       {...(gotPart ? { earnedPart: world.partName } : {})}
-      nextLabel={nextLevel === undefined ? '우주로' : '다음 단계'}
+      nextLabel={route.newPart ? '부품 받기' : nextLevel === undefined ? '우주로' : '다음 단계'}
       onRetry={() => setRoute({ name: 'stage', world: route.world, level: route.level, attempt: route.attempt + 1 })}
       onNext={() =>
         setRoute(
-          nextLevel === undefined
+          route.newPart
+            ? { name: 'reward', world: route.world }
+            : nextLevel === undefined
             ? { name: 'map', openWorld: route.world }
             : {
                 name: 'stage',

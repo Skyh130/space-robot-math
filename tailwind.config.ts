@@ -59,9 +59,31 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(6px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        // 부품이 로봇에 철컥 붙는 순간
+        attach: {
+          '0%': { opacity: '0', transform: 'scale(1.8)' },
+          '60%': { opacity: '1', transform: 'scale(0.94)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        popIn: {
+          '0%': { opacity: '0', transform: 'scale(0.4)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        shine: {
+          '0%, 100%': { opacity: '0.35', transform: 'scale(1)' },
+          '50%': { opacity: '0.85', transform: 'scale(1.08)' },
+        },
+        riseIn: {
+          '0%': { opacity: '0', transform: 'translateY(14px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         carry: 'carry 0.35s ease-out both',
+        attach: 'attach 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both',
+        'pop-in': 'popIn 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both',
+        shine: 'shine 1.6s ease-in-out infinite',
+        'rise-in': 'riseIn 0.5s ease-out both',
       },
     },
   },

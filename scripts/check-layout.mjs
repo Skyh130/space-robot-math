@@ -43,6 +43,9 @@ const SCREENS = [
   { name: 'W3 보스(타이머)', screen: 'w3-boss' },
   { name: 'W3 오답(묶음 힌트)', screen: 'w3feedback' },
   { name: '결과 화면', screen: 'result' },
+  { name: '격납고(3개)', screen: 'hangar' },
+  { name: '격납고(8개 완성)', screen: 'hangar-full' },
+  { name: '부품 획득 연출', screen: 'reward' },
 ]
 
 function measure() {
@@ -76,6 +79,8 @@ function measure() {
     .filter(({ size }) => size < 14)
 
   const clipped = [...document.querySelectorAll('button, p, svg, h1')]
+    // 장식은 일부러 화면 밖까지 퍼진다. overflow-hidden 이 잘라 주므로 스크롤은 생기지 않는다.
+    .filter((el) => el.closest('[aria-hidden="true"]') === null && el.getAttribute('aria-hidden') !== 'true')
     .map((el) => ({ el, r: el.getBoundingClientRect() }))
     .filter(
       ({ r }) =>

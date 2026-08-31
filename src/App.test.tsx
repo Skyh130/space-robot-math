@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -383,4 +383,84 @@ describe('월드 2·3 플레이 (Phase 5 완료 조건)', () => {
       }
     }
   }, 180000)
+})
+
+describe('Phase 6 — 격납고와 부품 획득', () => {
+  it('보스를 깨면 결과 → 부품 획득 연출 → 격납고 로 이어진다', async () => {
+    const user = userEvent.setup()
+    const store = fakeStorage()
+    let save = defaultSave()
+    for (const level of [1, 2, 3, 4, 5] as const) {
+      save = recordStage(save, { world: 1, level, stars: 3, correct: 8, skillLog: [] })
+    }
+    writeSave(save, store)
+
+    render(<App storage={store} />)
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    await user.click(key(/^보스/))
+
+    for (const question of buildStage(templatesFor(WORLD, 'boss'), stageSeed(1, 'boss', 0))) {
+      await solve(user, question)
+    }
+
+    expect(screen.getByText(`${WORLD.partName} 획득!`)).toBeInTheDocument()
+    await user.click(key('부품 받기'))
+
+    // 획득 연출
+    expect(screen.getByText('부품 획득!')).toBeInTheDocument()
+    await waitFor(
+      () => expect(screen.getByRole('button', { name: '격납고로' })).not.toHaveClass('invisible'),
+      { timeout: 6000 },
+    )
+    await user.click(key('격납고로'))
+
+    // 격납고에 부품이 붙어 있다
+    expect(screen.getByText('격납고')).toBeInTheDocument()
+    expect(screen.getByText('부품 1 / 8')).toBeInTheDocument()
+    expect(screen.getByLabelText('헤드 유닛')).toBeInTheDocument()
+
+    await user.click(key('우주로'))
+    expect(screen.getByText('어디로 갈까?')).toBeInTheDocument()
+  }, 120000)
+
+  it('이미 가진 부품은 획득 연출을 다시 하지 않는다', async () => {
+    const user = userEvent.setup()
+    const store = fakeStorage()
+    let save = defaultSave()
+    for (const level of STAGE_ORDER) {
+      save = recordStage(save, {
+        world: 1,
+        level,
+        stars: 3,
+        correct: 8,
+        skillLog: [],
+        ...(level === 'boss' ? { part: WORLD.part } : {}),
+      })
+    }
+    writeSave(save, store)
+
+    render(<App storage={store} />)
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    await user.click(key(/^보스/))
+
+    const attempt = 1
+    for (const question of buildStage(templatesFor(WORLD, 'boss'), stageSeed(1, 'boss', attempt))) {
+      await solve(user, question)
+    }
+    expect(screen.queryByRole('button', { name: '부품 받기' })).not.toBeInTheDocument()
+    expect(key('우주로')).toBeInTheDocument()
+  }, 120000)
+
+  it('월드맵에서 격납고로 갈 수 있다', async () => {
+    const user = userEvent.setup()
+    render(<App storage={fakeStorage()} />)
+
+    await user.click(key('출발!'))
+    await user.click(key('격납고'))
+    expect(screen.getByText('부품 0 / 8')).toBeInTheDocument()
+    // 아직 아무것도 없으면 자리만 남아 있다
+    expect(screen.getByLabelText('헤드 유닛 자리')).toBeInTheDocument()
+  })
 })

@@ -8,7 +8,10 @@ import { buildStage, checkAnswer, stageSeed, type StageLevel, type WorldId } fro
 import { Feedback } from './components/Feedback'
 import { QuestionCard } from './components/QuestionCard'
 import { ResultScreen } from './screens/ResultScreen'
+import { HangarScreen } from './screens/HangarScreen'
+import { PartRewardScreen } from './screens/PartRewardScreen'
 import { WorldMapScreen } from './screens/WorldMapScreen'
+import { WORLDS } from './data/worlds'
 import { defaultSave, recordStage } from './state/save'
 import { StageScreen } from './screens/StageScreen'
 import { TitleScreen } from './screens/TitleScreen'
@@ -42,6 +45,36 @@ function playedSave() {
 }
 
 function View() {
+  if (screen === 'hangar') {
+    return (
+      <HangarScreen
+        save={{ ...defaultSave(), parts: ['head', 'left_arm', 'right_arm'] }}
+        onBack={() => undefined}
+      />
+    )
+  }
+
+  if (screen === 'hangar-full') {
+    return (
+      <HangarScreen
+        save={{ ...defaultSave(), parts: WORLDS.map((w) => w.part) }}
+        onBack={() => undefined}
+      />
+    )
+  }
+
+  if (screen === 'reward') {
+    return (
+      <PartRewardScreen
+        part="right_arm"
+        partName="오른팔"
+        parts={['head', 'left_arm', 'right_arm']}
+        totalParts={8}
+        onContinue={() => undefined}
+      />
+    )
+  }
+
   if (screen === 'map') {
     return (
       <WorldMapScreen
