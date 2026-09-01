@@ -35,6 +35,21 @@ export type WorldProgress = {
   readonly bossPlays: number
   /** 도전 모드 최고 기록. 60초 안에 맞힌 문제 수다. 안 해 봤으면 0. */
   readonly bestChallenge: number
+  /**
+   * 주 단위 기록.
+   * 전체 최고 기록은 한 번 높이 찍으면 다시 깨기 어려워 금세 목표가 사라진다.
+   * 매주 0에서 다시 시작하는 기록이 있으면 이번 주에도 도전할 이유가 생긴다.
+   */
+  readonly weekly: WeeklyRecord
+}
+
+export type WeeklyRecord = {
+  /** 그 주 월요일의 날짜 키. 예: 20260831 */
+  readonly week: number
+  /** 이번 주 최고 기록. */
+  readonly best: number
+  /** 지난 주 최고 기록. 견줄 상대가 있어야 재미가 있다. */
+  readonly lastBest: number
 }
 
 export type SaveData = {
@@ -56,7 +71,21 @@ export function emptyWorld(): WorldProgress {
     plays: Array.from({ length: STAGES_PER_WORLD }, () => 0),
     bossPlays: 0,
     bestChallenge: 0,
+    weekly: { week: 0, best: 0, lastBest: 0 },
   }
+}
+
+/**
+ * 그 주 월요일의 날짜 키. 20260831 꼴이다.
+ *
+ * 기기의 현지 시각으로 센다. 아이가 쓰는 기기의 달력이 곧 아이의 한 주다.
+ */
+export function weekKeyOf(at: number): number {
+  const date = new Date(at)
+  date.setHours(0, 0, 0, 0)
+  // getDay() 는 일요일이 0이다. 월요일을 주의 시작으로 옮긴다.
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7))
+  return date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate()
 }
 
 export function defaultSave(): SaveData {
@@ -182,6 +211,16 @@ function readWorld(value: Record<string, unknown>): WorldProgress {
     plays,
     bossPlays: Math.max(0, intOr(value['bossPlays'], 0)),
     bestChallenge: Math.max(0, intOr(value['bestChallenge'], 0)),
+    weekly: readWeekly(value['weekly']),
+  }
+}
+
+function readWeekly(value: unknown): WeeklyRecord {
+  if (!isRecord(value)) return { week: 0, best: 0, lastBest: 0 }
+  return {
+    week: Math.max(0, intOr(value['week'], 0)),
+    best: Math.max(0, intOr(value['best'], 0)),
+    lastBest: Math.max(0, intOr(value['lastBest'], 0)),
   }
 }
 
@@ -215,6 +254,23 @@ export function starsOf(save: SaveData, world: WorldId, level: StageLevel): numb
 /** 도전 모드 최고 기록. */
 export function bestChallengeOf(save: SaveData, world: WorldId): number {
   return worldProgress(save, world).bestChallenge
+}
+
+/**
+ * 이번 주 기록. 주가 바뀌었으면 이번 주는 0이고 저장된 이번 주가 지난 주가 된다.
+ * 저장을 건드리지 않고 읽기만 한다.
+ */
+export function weeklyOf(save: SaveData, world: WorldId, at: number): WeeklyRecord {
+  const weekly = worldProgress(save, world).weekly
+  const week = weekKeyOf(at)
+  if (weekly.week === week) return weekly
+  // 주가 바뀌면 저장된 이번 주가 지난 주로 밀린다
+  return { week, best: 0, lastBest: weekly.week === 0 ? 0 : weekly.best }
+}
+
+/** 모든 월드의 도전 기록을 합친 수. */
+export function totalChallenge(save: SaveData): number {
+  return Object.values(save.worlds).reduce((sum, world) => sum + world.bestChallenge, 0)
 }
 
 export function isStagePlayed(save: SaveData, world: WorldId, level: StageLevel): boolean {
@@ -275,6 +331,8 @@ export type StageRecord = {
   readonly skillLog: readonly { readonly skill: SkillKey; readonly correct: boolean }[]
   /** 보스를 깼을 때 받는 부품. */
   readonly part?: RobotPart
+  /** 언제 끝냈는지. 주간 기록을 어느 주에 넣을지 정한다. 테스트에서 고정한다. */
+  readonly at?: number
 }
 
 /**
@@ -293,10 +351,18 @@ export function recordStage(save: SaveData, record: StageRecord): SaveData {
   let bossPlays = before.bossPlays
 
   let bestChallenge = before.bestChallenge
+  let weekly = before.weekly
 
   if (record.level === 'challenge') {
-    // 도전 모드는 별을 남기지 않는다. 최고 기록만 갱신한다.
+    // 도전 모드는 별을 남기지 않는다. 기록만 갱신한다.
     bestChallenge = Math.max(bestChallenge, record.correct)
+
+    const week = weekKeyOf(record.at ?? Date.now())
+    weekly =
+      weekly.week === week
+        ? { ...weekly, best: Math.max(weekly.best, record.correct) }
+        : // 주가 바뀌었다. 이번 주를 지난 주로 밀고 새로 시작한다.
+          { week, best: record.correct, lastBest: weekly.week === 0 ? 0 : weekly.best }
   } else if (record.level === 'boss') {
     bossStars = Math.max(bossStars, record.stars)
     // 별을 하나라도 받아야 보스를 깬 것으로 본다
@@ -330,7 +396,7 @@ export function recordStage(save: SaveData, record: StageRecord): SaveData {
     coins: save.coins + record.correct * COINS_PER_CORRECT,
     worlds: {
       ...save.worlds,
-      [key]: { stars, bossStars, bossCleared, plays, bossPlays, bestChallenge },
+      [key]: { stars, bossStars, bossCleared, plays, bossPlays, bestChallenge, weekly },
     },
     skillStats,
   }

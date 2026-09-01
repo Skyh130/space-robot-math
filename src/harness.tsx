@@ -8,6 +8,7 @@ import { buildStage, checkAnswer, stageSeed, type StageLevel, type WorldId } fro
 import { Feedback } from './components/Feedback'
 import { QuestionCard } from './components/QuestionCard'
 import { ResultScreen } from './screens/ResultScreen'
+import { BossIntroScreen } from './screens/BossIntroScreen'
 import { HangarScreen } from './screens/HangarScreen'
 import { PartRewardScreen } from './screens/PartRewardScreen'
 import { WorldMapScreen } from './screens/WorldMapScreen'
@@ -92,6 +93,18 @@ function View() {
     )
   }
 
+  if (screen === 'map-records') {
+    return (
+      <WorldMapScreen
+        save={clearedSave()}
+        openWorld={null}
+        onOpenWorld={() => undefined}
+        onPlay={() => undefined}
+        onHangar={() => undefined}
+      />
+    )
+  }
+
   if (screen === 'map') {
     return (
       <WorldMapScreen
@@ -143,12 +156,16 @@ function View() {
     return <TitleScreen onStart={() => undefined} />
   }
 
+  if (screen === 'boss-intro') {
+    return <BossIntroScreen world={world} onStart={() => undefined} />
+  }
+
   if (screen === 'challenge-result') {
     return (
       <ResultScreen
         correct={19}
         total={40}
-        challenge={{ best: 19, isRecord: true }}
+        challenge={{ best: 19, isRecord: true, weekBest: 19, lastWeekBest: 12 }}
         nextLabel="우주로"
         onRetry={() => undefined}
         onNext={() => undefined}
@@ -215,6 +232,27 @@ function View() {
         <QuestionCard prompt={question.prompt} />
         <Feedback
           result={checkAnswer(question, 0)}
+          {...(question.hintVisual === undefined
+            ? {}
+            : { visual: <HintVisualView visual={question.hintVisual} /> })}
+          onRetry={() => undefined}
+          onNext={() => undefined}
+        />
+      </div>
+    )
+  }
+
+  if (screen === 'combo') {
+    // 콤보 배지 + 그림 힌트까지 다 펴진, 가장 키가 큰 상태
+    const question = stageAt(2)[0]
+    if (!question) return null
+    const wrong = (question.choices ?? []).find((c) => String(c) !== String(question.answer))
+    return (
+      <div className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
+        <QuestionCard prompt={question.prompt} />
+        <Feedback
+          result={checkAnswer(question, wrong ?? 0)}
+          streak={8}
           {...(question.hintVisual === undefined
             ? {}
             : { visual: <HintVisualView visual={question.hintVisual} /> })}

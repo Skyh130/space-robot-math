@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { ChoiceGrid } from '../components/ChoiceGrid'
+import { ComboBadge, isComboMilestone } from '../components/ComboBadge'
 import { ORDER_ENDS } from '../data/world1'
 import { Feedback } from '../components/Feedback'
 import { HintVisualView } from '../components/HintVisual'
@@ -79,6 +80,9 @@ export function StageScreen({
   const [missed, setMissed] = useState<Question[]>([])
   const [remaining, setRemaining] = useState(timeLimitSeconds ?? 0)
   const [askingQuit, setAskingQuit] = useState(false)
+  // 첫 시도로 연달아 맞힌 수. 틀리면 조용히 0으로 돌아간다.
+  const [streak, setStreak] = useState(0)
+  const [showCombo, setShowCombo] = useState(false)
 
   const timed = timeLimitSeconds !== undefined
   const finished = useRef(false)
@@ -143,6 +147,7 @@ export function StageScreen({
     setTyped('')
     setResult(null)
     setFirstTry(true)
+    setShowCombo(false)
   }
 
   const submit = (given: AnswerValue) => {
@@ -155,6 +160,11 @@ export function StageScreen({
     if (firstTry) {
       entries = [...log, { skill: question.skill, correct: outcome.correct }]
       setLog(entries)
+
+      // 연속은 첫 시도만 센다. 답을 보고 다시 맞힌 것까지 세면 뜻이 없다.
+      const nextStreak = outcome.correct ? streak + 1 : 0
+      setStreak(nextStreak)
+      setShowCombo(outcome.correct && isComboMilestone(nextStreak))
 
       if (!outcome.correct) {
         missedNow = [...missed, question]
@@ -219,13 +229,14 @@ export function StageScreen({
       ) : result === null ? (
         <InputArea question={question} typed={typed} onTyped={setTyped} onSubmit={submit} />
       ) : timed ? (
-        <QuickFeedback result={result} />
+        <QuickFeedback result={result} {...(showCombo ? { streak } : {})} />
       ) : (
         <Feedback
           result={result}
           {...(result.correct || question.hintVisual === undefined
             ? {}
             : { visual: <HintVisualView visual={question.hintVisual} /> })}
+          {...(showCombo ? { streak } : {})}
           onRetry={() => {
             setResult(null)
             setTyped('')
@@ -321,25 +332,28 @@ function BackIcon() {
 }
 
 /** 시간을 재는 판에서 잠깐 스치는 피드백. 버튼이 없어 손이 멈추지 않는다. */
-function QuickFeedback({ result }: { result: AnswerResult }) {
+function QuickFeedback({ result, streak }: { result: AnswerResult; streak?: number }) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={`
+    <div className="flex w-full flex-col gap-2">
+      {streak === undefined ? null : <ComboBadge streak={streak} />}
+      <div
+        role="status"
+        aria-live="polite"
+        className={`
         flex min-h-[72px] w-full items-center justify-center gap-3 rounded-3xl border-3
         border-outline p-4 shadow-hard
         ${result.correct ? 'bg-energy' : 'bg-paper'}
       `}
-    >
-      {result.correct ? (
-        <p className="font-title text-2xl text-outline">좋아!</p>
-      ) : (
-        <p className="text-question text-outline">
-          {'답은 '}
-          <span className="text-number font-bold text-coral">{String(result.expected)}</span>
-        </p>
-      )}
+      >
+        {result.correct ? (
+          <p className="font-title text-2xl text-outline">좋아!</p>
+        ) : (
+          <p className="text-question text-outline">
+            {'답은 '}
+            <span className="text-number font-bold text-coral">{String(result.expected)}</span>
+          </p>
+        )}
+      </div>
     </div>
   )
 }

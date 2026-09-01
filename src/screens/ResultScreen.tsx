@@ -8,7 +8,13 @@ type ResultScreenProps = {
    * 도전 모드 결과. 별 대신 기록을 보여준다.
    * best 는 이번 판을 포함한 최고 기록이고, isRecord 면 이번에 갈아치운 것이다.
    */
-  challenge?: { readonly best: number; readonly isRecord: boolean }
+  challenge?: {
+    readonly best: number
+    readonly isRecord: boolean
+    /** 이번 주 최고. 전체 기록은 한 번 높이 찍으면 목표가 사라져서 주간 기록을 함께 둔다. */
+    readonly weekBest: number
+    readonly lastWeekBest: number
+  }
   /** 보스를 깬 판이면 얻은 부품 이름. */
   earnedPart?: string
   onRetry: () => void
@@ -42,6 +48,8 @@ export function ResultScreen({
         correct={correct}
         best={challenge.best}
         isRecord={challenge.isRecord}
+        weekBest={challenge.weekBest}
+        lastWeekBest={challenge.lastWeekBest}
         onRetry={onRetry}
         onNext={onNext}
         nextLabel={nextLabel}
@@ -118,6 +126,8 @@ function ChallengeResult({
   correct,
   best,
   isRecord,
+  weekBest,
+  lastWeekBest,
   onRetry,
   onNext,
   nextLabel,
@@ -125,10 +135,14 @@ function ChallengeResult({
   correct: number
   best: number
   isRecord: boolean
+  weekBest: number
+  lastWeekBest: number
   onRetry: () => void
   onNext: () => void
   nextLabel: string
 }) {
+  const beatLastWeek = lastWeekBest > 0 && weekBest > lastWeekBest
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6">
       {isRecord ? (
@@ -142,11 +156,17 @@ function ChallengeResult({
         <span className="text-6xl font-bold tabular-nums text-outline">{correct}</span>
       </div>
 
-      <div className="rounded-2xl border-3 border-outline bg-panel px-6 py-3 shadow-hard">
-        <p className="text-question text-paper">
-          최고 기록 <span className="text-number font-bold text-energy">{best}</span>개
-        </p>
+      <div className="flex w-full flex-col gap-1.5 rounded-2xl border-3 border-outline bg-panel px-5 py-3 shadow-hard">
+        <RecordRow label="최고 기록" value={best} highlight />
+        <RecordRow label="이번 주" value={weekBest} />
+        <RecordRow label="지난 주" value={lastWeekBest} muted={lastWeekBest === 0} />
       </div>
+
+      {beatLastWeek ? (
+        <p className="animate-rise-in font-title text-xl text-mint">
+          지난 주보다 {weekBest - lastWeekBest}개 더!
+        </p>
+      ) : null}
 
       <div className="flex w-full flex-col gap-3 pt-1">
         <button
@@ -172,6 +192,33 @@ function ChallengeResult({
           {nextLabel}
         </button>
       </div>
+    </div>
+  )
+}
+
+function RecordRow({
+  label,
+  value,
+  highlight = false,
+  muted = false,
+}: {
+  label: string
+  value: number
+  highlight?: boolean
+  muted?: boolean
+}) {
+  return (
+    <div className="flex items-baseline justify-between">
+      <span className={`text-base font-bold ${muted ? 'text-paper/40' : 'text-paper/70'}`}>
+        {label}
+      </span>
+      <span
+        className={`font-bold tabular-nums ${
+          highlight ? 'text-number text-energy' : muted ? 'text-xl text-paper/40' : 'text-xl text-paper'
+        }`}
+      >
+        {muted ? '없음' : `${String(value)}개`}
+      </span>
     </div>
   )
 }

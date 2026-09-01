@@ -6,6 +6,7 @@ import {
   isStageUnlocked,
   isWorldUnlocked,
   starsOf,
+  totalChallenge,
   totalStars,
   worldProgress,
   type SaveData,
@@ -44,13 +45,29 @@ export function WorldMapScreen({
     <div className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
       <header className="flex items-center justify-between">
         <h1 className="font-title text-2xl text-energy">어디로 갈까?</h1>
-        <div className="flex items-center gap-1.5 rounded-xl border-3 border-outline bg-panel px-3 py-1">
-          <StarIcon />
-          <span className="text-lg font-bold text-paper">{totalStars(save)}</span>
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 rounded-xl border-3 border-outline bg-panel px-2.5 py-1">
+            <StarIcon />
+            <span className="text-lg font-bold text-paper">{totalStars(save)}</span>
+          </div>
+          {/* 도전 기록을 다 합친 수. 월드가 늘수록 올릴 여지가 남는다. */}
+          {totalChallenge(save) > 0 ? (
+            <div
+              className="flex items-center gap-1.5 rounded-xl border-3 border-energy bg-panel px-2.5 py-1"
+              aria-label={`도전 기록 합계 ${String(totalChallenge(save))}개`}
+            >
+              <BoltIcon />
+              <span className="text-lg font-bold text-paper">{totalChallenge(save)}</span>
+            </div>
+          ) : null}
         </div>
       </header>
 
-      <div className="grid flex-1 grid-cols-2 content-start gap-2.5 overflow-y-auto">
+      {/*
+        min-h-0 이 없으면 행성 여덟 칸이 제 높이를 고집해 작은 폰에서 화면이 넘친다.
+        남는 공간만 쓰고, 모자라면 이 안에서만 스크롤한다.
+      */}
+      <div className="grid min-h-0 flex-1 grid-cols-2 content-start gap-2.5 overflow-y-auto">
         {WORLDS.map((world) => (
           <PlanetCard
             key={world.id}

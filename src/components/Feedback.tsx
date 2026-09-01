@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 
+import { ComboBadge } from './ComboBadge'
 import { josaOf, type AnswerResult } from '../engine'
 
 type FeedbackProps = {
@@ -8,6 +9,8 @@ type FeedbackProps = {
   visual?: ReactNode
   onRetry: () => void
   onNext: () => void
+  /** 연속 정답 고비를 넘겼을 때만 준다. 배지를 위에 띄운다. */
+  streak?: number
 }
 
 /**
@@ -18,9 +21,11 @@ type FeedbackProps = {
  * 2. 큰 빨간 X, 슬픈 표정, 부정적인 문구를 쓰지 않는다.
  * 3. 사과하지 않는다. "아까워! 다시 볼까?" 정도로 끝낸다.
  */
-export function Feedback({ result, visual, onRetry, onNext }: FeedbackProps) {
+export function Feedback({ result, visual, onRetry, onNext, streak }: FeedbackProps) {
   return (
-    <div
+    <div className="flex w-full flex-col gap-2">
+      {streak === undefined ? null : <ComboBadge streak={streak} />}
+      <div
       role="status"
       aria-live="polite"
       className={`
@@ -28,19 +33,20 @@ export function Feedback({ result, visual, onRetry, onNext }: FeedbackProps) {
         ${result.correct ? 'bg-energy' : 'bg-paper'}
       `}
     >
-      {result.correct ? <CorrectBody /> : <WrongBody result={result} visual={visual} />}
+        {result.correct ? <CorrectBody /> : <WrongBody result={result} visual={visual} />}
 
-      <button
-        type="button"
-        onClick={result.correct ? onNext : onRetry}
-        className="
+        <button
+          type="button"
+          onClick={result.correct ? onNext : onRetry}
+          className="
           min-h-touch w-full rounded-2xl border-3 border-outline bg-panel px-4 py-3
           font-title text-2xl text-paper shadow-hard transition-transform
           active:translate-y-1 active:shadow-none
         "
-      >
-        {result.correct ? '다음' : '다시 하기'}
-      </button>
+        >
+          {result.correct ? '다음' : '다시 하기'}
+        </button>
+      </div>
     </div>
   )
 }

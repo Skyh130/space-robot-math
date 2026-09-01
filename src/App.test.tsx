@@ -110,6 +110,12 @@ async function missThenFix(user: ReturnType<typeof userEvent.setup>) {
   return false
 }
 
+/** 보스 컷씬이 떠 있으면 넘긴다. 보스로 들어가는 길목마다 거친다. */
+async function dismissBossIntro(user: ReturnType<typeof userEvent.setup>) {
+  const intro = screen.queryByRole('button', { name: '보스전 시작' })
+  if (intro) await user.click(intro)
+}
+
 async function playStage(
   user: ReturnType<typeof userEvent.setup>,
   level: StageLevel,
@@ -130,6 +136,7 @@ describe('월드 1 통째로 플레이', () => {
     await user.click(key(/^1단계/))
 
     for (const level of STAGE_ORDER) {
+      await dismissBossIntro(user)
       await playStage(user, level)
       expect(screen.getByLabelText('별 3개'), String(level)).toBeInTheDocument()
 
@@ -315,6 +322,7 @@ describe('월드 2·3 플레이 (Phase 5 완료 조건)', () => {
     await user.click(key(/^1단계/))
 
     for (const level of STAGE_ORDER) {
+      await dismissBossIntro(user)
       for (const question of buildStage(templatesFor(world, level), stageSeed(2, level, 0))) {
         await solve(user, question)
       }
@@ -344,7 +352,9 @@ describe('월드 2·3 플레이 (Phase 5 완료 조건)', () => {
       await user.click(key('다음 단계'))
     }
 
-    // 5단계까지 끝내면 보스가 시작된다
+    // 5단계까지 끝내면 보스 컷씬이 먼저 뜬다
+    expect(screen.getByText('보스 등장!')).toBeInTheDocument()
+    await dismissBossIntro(user)
     expect(screen.getByText(`${world.name} · 보스`)).toBeInTheDocument()
   }, 240000)
 
@@ -366,6 +376,7 @@ describe('월드 2·3 플레이 (Phase 5 완료 조건)', () => {
     await user.click(key('출발!'))
     await user.click(key(new RegExp(`^${world.name}`)))
     await user.click(key(/^보스/))
+    await dismissBossIntro(user)
     expect(screen.getByLabelText(/남은 시간 \d+초/)).toBeInTheDocument()
     expect(screen.getByLabelText('12문제 중 1번째')).toBeInTheDocument()
   }, 60000)
@@ -382,6 +393,7 @@ describe('월드 2·3 플레이 (Phase 5 완료 조건)', () => {
         await user.click(key('출발!'))
         await user.click(key(new RegExp(`^${meta.name}`)))
         await user.click(key(level === 'boss' ? /^보스/ : new RegExp(`^${String(level)}단계`)))
+        await dismissBossIntro(user)
 
         expect(
           screen.queryByLabelText(/남은 시간/),
@@ -407,6 +419,7 @@ describe('Phase 6 — 격납고와 부품 획득', () => {
     await user.click(key('출발!'))
     await user.click(key(new RegExp(`^${WORLD.name}`)))
     await user.click(key(/^보스/))
+    await dismissBossIntro(user)
 
     for (const question of buildStage(templatesFor(WORLD, 'boss'), stageSeed(1, 'boss', 0))) {
       await solve(user, question)
@@ -452,6 +465,7 @@ describe('Phase 6 — 격납고와 부품 획득', () => {
     await user.click(key('출발!'))
     await user.click(key(new RegExp(`^${WORLD.name}`)))
     await user.click(key(/^보스/))
+    await dismissBossIntro(user)
 
     const attempt = 1
     for (const question of buildStage(templatesFor(WORLD, 'boss'), stageSeed(1, 'boss', attempt))) {
@@ -576,9 +590,140 @@ describe('60초 도전 (재미 구간)', () => {
       await user.click(key('출발!'))
       await user.click(key(new RegExp(`^${WORLD.name}`)))
       await user.click(key(level === 'boss' ? /^보스/ : new RegExp(`^${String(level)}단계`)))
+      await dismissBossIntro(user)
 
       expect(screen.queryByLabelText(/남은 시간/), String(level)).toBeNull()
       view.unmount()
     }
   }, 120000)
+})
+
+describe('재미 포인트', () => {
+  function clearedWorld1Store(): Storage {
+    const store = fakeStorage()
+    let save = defaultSave()
+    for (const level of STAGE_ORDER) {
+      save = recordStage(save, {
+        world: 1,
+        level,
+        stars: 3,
+        correct: 8,
+        skillLog: [],
+        ...(level === 'boss' ? { part: WORLD.part } : {}),
+      })
+    }
+    writeSave(save, store)
+    return store
+  }
+
+  it('연속으로 맞히면 고비마다 배지가 뜬다', async () => {
+    const user = userEvent.setup()
+    render(<App storage={fakeStorage()} />)
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    await user.click(key(/^1단계/))
+
+    const questions = questionsFor(1)
+    for (let i = 0; i < 3; i += 1) {
+      const question = questions[i] as Question
+      await user.click(key(String(question.answer)))
+      if (i < 2) {
+        // 두 개까지는 잔치를 벌이지 않는다
+        expect(screen.queryByText(/연속/), String(i)).toBeNull()
+      }
+      await user.click(key('다음'))
+    }
+    // 세 번째를 맞힌 뒤 배지가 떴어야 한다
+    expect(screen.queryByText(/연속/)).toBeNull() // 다음 문제로 넘어가면 사라진다
+  }, 60000)
+
+  it('세 개를 연달아 맞힌 순간 배지가 보인다', async () => {
+    const user = userEvent.setup()
+    render(<App storage={fakeStorage()} />)
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    await user.click(key(/^1단계/))
+
+    const questions = questionsFor(1)
+    for (let i = 0; i < 3; i += 1) {
+      const question = questions[i] as Question
+      await user.click(key(String(question.answer)))
+      if (i < 2) await user.click(key('다음'))
+    }
+    expect(screen.getByText(/3연속/)).toBeInTheDocument()
+  }, 60000)
+
+  it('틀리면 연속이 조용히 끊긴다. 끊겼다고 알려 주지 않는다', async () => {
+    const user = userEvent.setup()
+    render(<App storage={fakeStorage()} />)
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    await user.click(key(/^1단계/))
+
+    const questions = questionsFor(1)
+    for (let i = 0; i < 2; i += 1) {
+      await user.click(key(String((questions[i] as Question).answer)))
+      await user.click(key('다음'))
+    }
+
+    // 세 번째를 틀린다
+    const third = questions[2] as Question
+    const wrong = (third.choices ?? []).find((c) => String(c) !== String(third.answer))
+    await user.click(key(String(wrong)))
+
+    const text = document.body.textContent ?? ''
+    expect(text).not.toContain('연속')
+    expect(text).not.toContain('끊')
+  }, 60000)
+
+  it('보스에 들어가기 전에 컷씬이 나온다', async () => {
+    const user = userEvent.setup()
+    render(<App storage={clearedWorld1Store()} />)
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    await user.click(key(/^보스/))
+
+    expect(screen.getByText('보스 등장!')).toBeInTheDocument()
+    expect(screen.getByText(`이기면 ${WORLD.partName}`)).toBeInTheDocument()
+
+    await user.click(key('보스전 시작'))
+    expect(screen.getByText(`${WORLD.name} · 보스`)).toBeInTheDocument()
+  }, 60000)
+
+  it('일반 단계에는 컷씬이 없다', async () => {
+    const user = userEvent.setup()
+    render(<App storage={clearedWorld1Store()} />)
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    await user.click(key(/^3단계/))
+
+    expect(screen.queryByText('보스 등장!')).toBeNull()
+    expect(screen.getByText(`${WORLD.name} · 3단계`)).toBeInTheDocument()
+  })
+
+  it('월드맵에 도전 기록 합계가 뜬다', async () => {
+    const user = userEvent.setup()
+    const store = clearedWorld1Store()
+    let save = loadSave(store)
+    save = recordStage(save, {
+      world: 1,
+      level: 'challenge',
+      stars: 0,
+      correct: 16,
+      skillLog: [],
+      at: Date.now(),
+    })
+    writeSave(save, store)
+
+    render(<App storage={store} />)
+    await user.click(key('출발!'))
+    expect(screen.getByLabelText('도전 기록 합계 16개')).toBeInTheDocument()
+  })
+
+  it('도전을 한 번도 안 했으면 합계를 띄우지 않는다', async () => {
+    const user = userEvent.setup()
+    render(<App storage={clearedWorld1Store()} />)
+    await user.click(key('출발!'))
+    expect(screen.queryByLabelText(/도전 기록 합계/)).toBeNull()
+  })
 })

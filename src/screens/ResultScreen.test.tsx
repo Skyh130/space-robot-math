@@ -74,3 +74,111 @@ describe('ResultScreen — 내용', () => {
     expect(screen.getByRole('button', { name: '격납고' })).toBeInTheDocument()
   })
 })
+
+describe('ResultScreen — 60초 도전 결과', () => {
+  const base = {
+    correct: 19,
+    total: 40,
+    onRetry: noop,
+    onNext: noop,
+    nextLabel: '우주로',
+  }
+
+  it('별이 아니라 기록을 보여준다', () => {
+    render(
+      <ResultScreen
+        {...base}
+        challenge={{ best: 19, isRecord: true, weekBest: 19, lastWeekBest: 12 }}
+      />,
+    )
+    expect(screen.queryByLabelText(/^별/)).toBeNull()
+    expect(screen.getByText('이번에 충전한 코어')).toBeInTheDocument()
+    expect(screen.getByText('19')).toBeInTheDocument()
+  })
+
+  it('신기록이면 크게 알려 준다', () => {
+    render(
+      <ResultScreen
+        {...base}
+        challenge={{ best: 19, isRecord: true, weekBest: 19, lastWeekBest: 12 }}
+      />,
+    )
+    expect(screen.getByText('신기록!')).toBeInTheDocument()
+  })
+
+  it('기록을 못 넘으면 그냥 칭찬한다. 나무라지 않는다', () => {
+    const { container } = render(
+      <ResultScreen
+        {...base}
+        correct={9}
+        challenge={{ best: 19, isRecord: false, weekBest: 19, lastWeekBest: 12 }}
+      />,
+    )
+    expect(screen.queryByText('신기록!')).toBeNull()
+    expect(screen.getByText('잘했어!')).toBeInTheDocument()
+    for (const banned of ['실패', '아깝', '부족']) {
+      expect(container.textContent, banned).not.toContain(banned)
+    }
+  })
+
+  it('최고·이번 주·지난 주를 나란히 보여준다', () => {
+    const { container } = render(
+      <ResultScreen
+        {...base}
+        challenge={{ best: 22, isRecord: false, weekBest: 19, lastWeekBest: 12 }}
+      />,
+    )
+    expect(container.textContent).toContain('최고 기록')
+    expect(container.textContent).toContain('이번 주')
+    expect(container.textContent).toContain('지난 주')
+    expect(screen.getByText('22개')).toBeInTheDocument()
+    expect(screen.getByText('19개')).toBeInTheDocument()
+    expect(screen.getByText('12개')).toBeInTheDocument()
+  })
+
+  it('지난 주를 넘기면 얼마나 늘었는지 알려 준다', () => {
+    render(
+      <ResultScreen
+        {...base}
+        challenge={{ best: 19, isRecord: true, weekBest: 19, lastWeekBest: 12 }}
+      />,
+    )
+    expect(screen.getByText('지난 주보다 7개 더!')).toBeInTheDocument()
+  })
+
+  it('지난 주 기록이 없으면 견주지 않는다', () => {
+    render(
+      <ResultScreen
+        {...base}
+        challenge={{ best: 19, isRecord: true, weekBest: 19, lastWeekBest: 0 }}
+      />,
+    )
+    expect(screen.queryByText(/지난 주보다/)).toBeNull()
+    expect(screen.getByText('없음')).toBeInTheDocument()
+  })
+
+  it('지난 주를 못 넘겼다고 말하지 않는다', () => {
+    const { container } = render(
+      <ResultScreen
+        {...base}
+        correct={8}
+        challenge={{ best: 22, isRecord: false, weekBest: 8, lastWeekBest: 20 }}
+      />,
+    )
+    expect(container.textContent).not.toMatch(/지난 주보다/)
+  })
+
+  it('첫 버튼이 한 번 더다. 다시 할 마음이 식기 전에 누를 수 있어야 한다', async () => {
+    const user = userEvent.setup()
+    const onRetry = vi.fn()
+    render(
+      <ResultScreen
+        {...base}
+        onRetry={onRetry}
+        challenge={{ best: 19, isRecord: true, weekBest: 19, lastWeekBest: 12 }}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: '한 번 더!' }))
+    expect(onRetry).toHaveBeenCalledOnce()
+  })
+})

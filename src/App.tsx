@@ -10,13 +10,14 @@ import {
   worldById,
 } from './data/worlds'
 import { buildStage, stageSeed, starsFor, type StageLevel, type WorldId } from './engine'
+import { BossIntroScreen } from './screens/BossIntroScreen'
 import { HangarScreen } from './screens/HangarScreen'
 import { PartRewardScreen } from './screens/PartRewardScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { StageScreen, type StageOutcome } from './screens/StageScreen'
 import { TitleScreen } from './screens/TitleScreen'
 import { WorldMapScreen } from './screens/WorldMapScreen'
-import { bestChallengeOf, playsOf } from './state/save'
+import { bestChallengeOf, playsOf, weeklyOf } from './state/save'
 import { ProgressProvider, useProgress } from './state/useProgress'
 
 /**
@@ -29,6 +30,7 @@ type Route =
   | { name: 'title' }
   | { name: 'map'; openWorld: WorldId | null }
   | { name: 'hangar' }
+  | { name: 'bossIntro'; world: WorldId }
   | { name: 'stage'; world: WorldId; level: StageLevel; attempt: number }
   | { name: 'reward'; world: WorldId }
   | {
@@ -41,6 +43,8 @@ type Route =
       newPart: boolean
       /** 도전 모드에 들어가기 전의 최고 기록. 신기록인지 가리는 데 쓴다. */
       bestBefore: number
+      /** 도전 모드에 들어가기 전의 주간 기록. */
+      weeklyBefore: { readonly best: number; readonly lastBest: number }
     }
 
 export default function App({ storage }: { storage?: Storage }) {
@@ -68,9 +72,30 @@ function Router() {
         openWorld={route.openWorld}
         onOpenWorld={(world) => setRoute({ name: 'map', openWorld: world })}
         onPlay={(world, level) =>
-          setRoute({ name: 'stage', world, level, attempt: playsOf(save, world, level) })
+          setRoute(
+            // 보스는 컷씬을 한 번 거쳐 들어간다. 부품이 걸린 판이라는 걸 알려 준다.
+            level === 'boss'
+              ? { name: 'bossIntro', world }
+              : { name: 'stage', world, level, attempt: playsOf(save, world, level) },
+          )
         }
         onHangar={() => setRoute({ name: 'hangar' })}
+      />
+    )
+  }
+
+  if (route.name === 'bossIntro') {
+    return (
+      <BossIntroScreen
+        world={worldById(route.world)}
+        onStart={() =>
+          setRoute({
+            name: 'stage',
+            world: route.world,
+            level: 'boss',
+            attempt: playsOf(save, route.world, 'boss'),
+          })
+        }
       />
     )
   }
@@ -114,6 +139,7 @@ function Router() {
           const stars = starsFor(outcome.correct, outcome.total, rule.starThresholds)
           const hadPart = save.parts.includes(world.part)
           const bestBefore = bestChallengeOf(save, route.world)
+          const weeklyBefore = weeklyOf(save, route.world, Date.now())
           finishStage({
             world: route.world,
             level: route.level,
@@ -129,6 +155,7 @@ function Router() {
             // 이미 가진 부품을 또 받는 연출은 하지 않는다
             newPart: route.level === 'boss' && stars >= 1 && !hadPart,
             bestBefore,
+            weeklyBefore: { best: weeklyBefore.best, lastBest: weeklyBefore.lastBest },
           })
         }}
       />
@@ -150,6 +177,8 @@ function Router() {
         challenge={{
           best: Math.max(route.bestBefore, route.outcome.correct),
           isRecord: route.outcome.correct > route.bestBefore,
+          weekBest: Math.max(route.weeklyBefore.best, route.outcome.correct),
+          lastWeekBest: route.weeklyBefore.lastBest,
         }}
         nextLabel="우주로"
         onRetry={() =>
@@ -185,12 +214,14 @@ function Router() {
             ? { name: 'reward', world: route.world }
             : nextLevel === undefined
               ? { name: 'map', openWorld: route.world }
-              : {
-                  name: 'stage',
-                  world: route.world,
-                  level: nextLevel,
-                  attempt: playsOf(save, route.world, nextLevel),
-                },
+              : nextLevel === 'boss'
+                ? { name: 'bossIntro', world: route.world }
+                : {
+                    name: 'stage',
+                    world: route.world,
+                    level: nextLevel,
+                    attempt: playsOf(save, route.world, nextLevel),
+                  },
         )
       }
       {...(nextLevel === undefined

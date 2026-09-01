@@ -15,7 +15,10 @@ import {
   SAVE_KEY,
   SAVE_VERSION,
   starsOf,
+  totalChallenge,
   totalStars,
+  weeklyOf,
+  weekKeyOf,
   worldProgress,
   writeSave,
   type SaveData,
@@ -431,5 +434,122 @@ describe('60초 도전', () => {
   it('말이 안 되는 기록은 다듬는다', () => {
     const save = migrate({ worlds: { '1': { bestChallenge: -5 } } })
     expect(bestChallengeOf(save, 1)).toBe(0)
+  })
+})
+
+describe('weekKeyOf — 주 나누기', () => {
+  const at = (iso: string) => new Date(iso).getTime()
+
+  it('같은 주의 날들은 같은 키다', () => {
+    // 2026-08-31 은 월요일
+    const monday = weekKeyOf(at('2026-08-31T09:00:00'))
+    for (const day of ['2026-08-31', '2026-09-02', '2026-09-06']) {
+      expect(weekKeyOf(at(`${day}T23:30:00`)), day).toBe(monday)
+    }
+  })
+
+  it('월요일이 되면 키가 바뀐다', () => {
+    const thisWeek = weekKeyOf(at('2026-09-06T23:59:00')) // 일요일
+    const nextWeek = weekKeyOf(at('2026-09-07T00:01:00')) // 월요일
+    expect(nextWeek).not.toBe(thisWeek)
+  })
+
+  it('그 주 월요일 날짜를 키로 쓴다', () => {
+    expect(weekKeyOf(at('2026-09-03T12:00:00'))).toBe(20260831)
+  })
+})
+
+describe('주간 기록', () => {
+  const at = (iso: string) => new Date(iso).getTime()
+  const MON = at('2026-08-31T10:00:00')
+  const WED = at('2026-09-02T10:00:00')
+  const NEXT_MON = at('2026-09-07T10:00:00')
+
+  function play(save: SaveData, correct: number, when: number): SaveData {
+    return recordStage(save, {
+      world: 1,
+      level: 'challenge',
+      stars: 0,
+      correct,
+      skillLog: [],
+      at: when,
+    })
+  }
+
+  it('이번 주 최고를 갱신한다', () => {
+    let save = play(defaultSave(), 12, MON)
+    expect(weeklyOf(save, 1, WED).best).toBe(12)
+
+    save = play(save, 18, WED)
+    expect(weeklyOf(save, 1, WED).best).toBe(18)
+  })
+
+  it('이번 주 기록보다 낮으면 그대로 둔다', () => {
+    let save = play(defaultSave(), 18, MON)
+    save = play(save, 9, WED)
+    expect(weeklyOf(save, 1, WED).best).toBe(18)
+  })
+
+  it('주가 바뀌면 이번 주가 지난 주로 밀리고 새로 시작한다', () => {
+    let save = play(defaultSave(), 18, MON)
+    save = play(save, 11, NEXT_MON)
+
+    const weekly = weeklyOf(save, 1, NEXT_MON)
+    expect(weekly.best).toBe(11)
+    expect(weekly.lastBest).toBe(18)
+  })
+
+  it('한 판도 안 한 새 주는 읽기만 해도 0으로 보인다. 저장은 그대로다', () => {
+    const save = play(defaultSave(), 18, MON)
+
+    const nextWeek = weeklyOf(save, 1, NEXT_MON)
+    expect(nextWeek.best).toBe(0)
+    expect(nextWeek.lastBest).toBe(18)
+    // 읽었다고 저장이 바뀌지는 않는다
+    expect(worldProgress(save, 1).weekly.best).toBe(18)
+  })
+
+  it('한 주를 통째로 건너뛰어도 마지막에 한 것이 지난 주가 된다', () => {
+    let save = play(defaultSave(), 20, MON)
+    save = play(save, 7, at('2026-09-21T10:00:00'))
+    expect(weeklyOf(save, 1, at('2026-09-21T10:00:00')).lastBest).toBe(20)
+  })
+
+  it('처음 하는 주는 지난 주가 0이다', () => {
+    const save = play(defaultSave(), 15, MON)
+    expect(weeklyOf(save, 1, MON).lastBest).toBe(0)
+  })
+
+  it('전체 최고 기록은 주와 상관없이 이어진다', () => {
+    let save = play(defaultSave(), 22, MON)
+    save = play(save, 9, NEXT_MON)
+    expect(bestChallengeOf(save, 1)).toBe(22)
+    expect(weeklyOf(save, 1, NEXT_MON).best).toBe(9)
+  })
+
+  it('옛 저장에는 주간 기록이 없다', () => {
+    const save = migrate({ worlds: { '1': { bestChallenge: 12 } } })
+    expect(worldProgress(save, 1).weekly).toEqual({ week: 0, best: 0, lastBest: 0 })
+  })
+})
+
+describe('totalChallenge', () => {
+  it('모든 월드의 도전 기록을 더한다', () => {
+    let save = defaultSave()
+    for (const world of [1, 2, 3] as const) {
+      save = recordStage(save, {
+        world,
+        level: 'challenge',
+        stars: 0,
+        correct: world * 5,
+        skillLog: [],
+        at: Date.now(),
+      })
+    }
+    expect(totalChallenge(save)).toBe(5 + 10 + 15)
+  })
+
+  it('안 해 봤으면 0이다', () => {
+    expect(totalChallenge(defaultSave())).toBe(0)
   })
 })
