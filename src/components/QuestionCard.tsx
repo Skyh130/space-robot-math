@@ -33,8 +33,8 @@ export function QuestionCard({ prompt }: QuestionCardProps) {
   return (
     <div
       className="
-        flex w-full flex-1 flex-col items-center justify-center gap-2 rounded-3xl border-3
-        border-outline bg-paper px-5 py-6 shadow-hard
+        flex w-full flex-1 flex-col items-center justify-center gap-1.5 rounded-3xl border-3
+        border-outline bg-paper px-5 py-4 shadow-hard
       "
     >
       {lines.map((line, index) => (

@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { loadSave, starsOf, type StageRecord } from './save'
+import { COINS_PER_CORRECT, loadSave, starsOf, type StageRecord } from './save'
 import { ProgressProvider, useProgress } from './useProgress'
 
 function fakeStorage(): Storage {
@@ -20,6 +20,8 @@ function fakeStorage(): Storage {
 
 let finish: (record: StageRecord) => void
 let reset: () => void
+
+const EIGHT_CORRECT = `코인 ${String(8 * COINS_PER_CORRECT)}`
 
 function Probe() {
   const progress = useProgress()
@@ -42,7 +44,7 @@ describe('useProgress', () => {
       finish({ world: 1, level: 1, stars: 3, correct: 8, skillLog: [] })
     })
 
-    expect(screen.getByText('코인 80')).toBeInTheDocument()
+    expect(screen.getByText(EIGHT_CORRECT)).toBeInTheDocument()
     // 화면만 바뀌고 저장이 안 되면 앱을 닫는 순간 사라진다
     expect(starsOf(loadSave(store), 1, 1)).toBe(3)
   })
@@ -63,7 +65,7 @@ describe('useProgress', () => {
         <Probe />
       </ProgressProvider>,
     )
-    expect(screen.getAllByText('코인 80')).toHaveLength(2)
+    expect(screen.getAllByText(EIGHT_CORRECT)).toHaveLength(2)
   })
 
   it('처음부터 다시 시작할 수 있다', () => {

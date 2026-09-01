@@ -33,6 +33,11 @@ type StageScreenProps = {
   /** "숫자 소행성대 · 2단계" 처럼 지금 어디인지 알려 준다. */
   label: string
   onFinish: (outcome: StageOutcome) => void
+  /**
+   * 스테이지를 도중에 그만두고 나간다.
+   * 잘못 들어왔을 때 8문제를 다 풀어야만 빠져나갈 수 있으면 갇힌 것이나 같다.
+   */
+  onQuit?: () => void
   /** 오답을 3문제 뒤에 숫자만 바꿔 다시 내기 위해 필요하다. */
   templates?: readonly AnyQuestionTemplate[]
   /** 시간 제한. W3 보스에만 있다. */
@@ -53,6 +58,7 @@ export function StageScreen({
   questions: initialQuestions,
   label,
   onFinish,
+  onQuit,
   templates,
   timeLimitSeconds,
 }: StageScreenProps) {
@@ -64,6 +70,7 @@ export function StageScreen({
   const [log, setLog] = useState<StageOutcome['skillLog']>([])
   const [missed, setMissed] = useState<Question[]>([])
   const [remaining, setRemaining] = useState(timeLimitSeconds ?? 0)
+  const [askingQuit, setAskingQuit] = useState(false)
 
   const timed = timeLimitSeconds !== undefined
   const finished = useRef(false)
@@ -162,9 +169,29 @@ export function StageScreen({
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
+    <div className="flex flex-1 flex-col gap-2.5 overflow-hidden px-4 pb-4 pt-3">
       <header className="flex flex-col items-center gap-2">
-        <p className="font-title text-base text-paper/70">{label}</p>
+        <div className="flex w-full items-center justify-between gap-2">
+          {onQuit === undefined ? (
+            <span className="w-12" />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAskingQuit(true)}
+              aria-label="나가기"
+              className="
+                flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-3
+                border-outline bg-panel shadow-hard transition-transform
+                active:translate-y-1 active:shadow-none
+              "
+            >
+              <BackIcon />
+            </button>
+          )}
+          <p className="font-title text-base text-paper/70">{label}</p>
+          {/* 제목을 가운데 두기 위한 빈자리 */}
+          <span className="w-12 shrink-0" />
+        </div>
         {timed ? (
           <div className="w-full">
             <TimerBar remainingSeconds={remaining} totalSeconds={timeLimitSeconds ?? 0} />
@@ -175,7 +202,9 @@ export function StageScreen({
 
       <QuestionCard prompt={question.prompt} />
 
-      {result === null ? (
+      {askingQuit ? (
+        <QuitConfirm onStay={() => setAskingQuit(false)} onLeave={onQuit ?? (() => undefined)} />
+      ) : result === null ? (
         <InputArea question={question} typed={typed} onTyped={setTyped} onSubmit={submit} />
       ) : timed ? (
         <QuickFeedback result={result} />
@@ -193,6 +222,61 @@ export function StageScreen({
         />
       )}
     </div>
+  )
+}
+
+/**
+ * 그만둘지 묻는다.
+ *
+ * 한 번에 나가지 않고 한 번 더 묻는다. 8살 손가락은 옆 버튼을 잘 누르는데,
+ * 그때마다 풀던 판이 날아가면 안 된다.
+ */
+function QuitConfirm({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
+  return (
+    <div className="flex w-full flex-col gap-3 rounded-3xl border-3 border-outline bg-paper p-4 shadow-hard">
+      <p className="font-title text-2xl text-outline">그만 할까?</p>
+      <p className="text-question text-outline/80">지금까지 푼 건 저장되지 않아.</p>
+
+      <div className="flex flex-col gap-2.5 pt-1">
+        <button
+          type="button"
+          onClick={onStay}
+          className="
+            min-h-touch w-full rounded-2xl border-3 border-outline bg-energy px-4 py-3
+            font-title text-2xl text-outline shadow-hard transition-transform
+            active:translate-y-1 active:shadow-none
+          "
+        >
+          계속 풀기
+        </button>
+        <button
+          type="button"
+          onClick={onLeave}
+          className="
+            min-h-touch w-full rounded-2xl border-3 border-outline bg-panel px-4 py-3
+            font-title text-xl text-paper shadow-hard transition-transform
+            active:translate-y-1 active:shadow-none
+          "
+        >
+          나갈래
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function BackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+      <path
+        d="M15 5l-7 7 7 7"
+        fill="none"
+        stroke="#FFF6E5"
+        strokeWidth={3.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 

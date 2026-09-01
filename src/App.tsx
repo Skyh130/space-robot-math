@@ -99,6 +99,7 @@ function Router() {
           ? {}
           : { timeLimitSeconds: rule.timeLimitSeconds })}
         label={`${world.name} · ${levelLabel(route.level)}`}
+        onQuit={() => setRoute({ name: 'map', openWorld: route.world })}
         onFinish={(outcome) => {
           const stars = starsFor(outcome.correct, outcome.total, rule.starThresholds)
           const hadPart = save.parts.includes(world.part)

@@ -273,3 +273,75 @@ describe('StageScreen — 타이머', () => {
     expect(onFinish).toHaveBeenCalledOnce()
   }, 10000)
 })
+
+describe('StageScreen — 중간에 나가기', () => {
+  it('onQuit 을 주지 않으면 나가기 버튼이 없다', () => {
+    render(<StageScreen questions={makeStage(3)} label="x" onFinish={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: '나가기' })).not.toBeInTheDocument()
+  })
+
+  it('한 번에 나가지 않고 한 번 더 묻는다', async () => {
+    const user = userEvent.setup()
+    const onQuit = vi.fn()
+    render(<StageScreen questions={makeStage(3)} label="x" onFinish={vi.fn()} onQuit={onQuit} />)
+
+    await user.click(key('나가기'))
+    expect(screen.getByText('그만 할까?')).toBeInTheDocument()
+    // 아직 나가지 않았다
+    expect(onQuit).not.toHaveBeenCalled()
+  })
+
+  it('계속 풀기를 누르면 풀던 문제로 돌아온다', async () => {
+    const user = userEvent.setup()
+    const questions = makeStage(3)
+    const onQuit = vi.fn()
+    render(<StageScreen questions={questions} label="x" onFinish={vi.fn()} onQuit={onQuit} />)
+
+    await user.click(key('나가기'))
+    await user.click(key('계속 풀기'))
+
+    expect(onQuit).not.toHaveBeenCalled()
+    expect(screen.getByText(questions[0]?.prompt ?? '')).toBeInTheDocument()
+    // 보기가 다시 눌린다
+    await solve(user, questions[0] as Question)
+    expect(screen.getByText('잘했어!')).toBeInTheDocument()
+  })
+
+  it('나갈래를 누르면 나간다', async () => {
+    const user = userEvent.setup()
+    const onQuit = vi.fn()
+    render(<StageScreen questions={makeStage(3)} label="x" onFinish={vi.fn()} onQuit={onQuit} />)
+
+    await user.click(key('나가기'))
+    await user.click(key('나갈래'))
+    expect(onQuit).toHaveBeenCalledOnce()
+  })
+
+  it('중간에 나가면 스테이지를 끝낸 것으로 치지 않는다', async () => {
+    const user = userEvent.setup()
+    const questions = makeStage(3)
+    const onFinish = vi.fn()
+    const onQuit = vi.fn()
+    render(
+      <StageScreen questions={questions} label="x" onFinish={onFinish} onQuit={onQuit} />,
+    )
+
+    await solve(user, questions[0] as Question)
+    await user.click(key('다음'))
+
+    await user.click(key('나가기'))
+    await user.click(key('나갈래'))
+
+    // 별도 코인도 주지 않는다. 안 한 것과 같다.
+    expect(onFinish).not.toHaveBeenCalled()
+    expect(onQuit).toHaveBeenCalledOnce()
+  })
+
+  it('묻는 동안에는 문제에 답할 수 없다', async () => {
+    const user = userEvent.setup()
+    render(<StageScreen questions={makeStage(3)} label="x" onFinish={vi.fn()} onQuit={vi.fn()} />)
+
+    await user.click(key('나가기'))
+    expect(screen.queryByLabelText('내가 쓴 답')).not.toBeInTheDocument()
+  })
+})

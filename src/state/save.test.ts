@@ -161,7 +161,7 @@ describe('스테이지 결과 반영', () => {
     let save = defaultSave()
     save = recordStage(save, { world: 1, level: 1, stars: 2, correct: 7, skillLog: [] })
     expect(starsOf(save, 1, 1)).toBe(2)
-    expect(save.coins).toBe(70)
+    expect(save.coins).toBe(7 * COINS_PER_CORRECT)
   })
 
   it('다시 해서 못 봐도 이미 받은 별을 빼앗지 않는다', () => {
@@ -169,7 +169,7 @@ describe('스테이지 결과 반영', () => {
     save = recordStage(save, { world: 1, level: 1, stars: 1, correct: 6, skillLog: [] })
     expect(starsOf(save, 1, 1)).toBe(3)
     // 코인은 다시 할 때마다 또 받는다
-    expect(save.coins).toBe(140)
+    expect(save.coins).toBe(14 * COINS_PER_CORRECT)
   })
 
   it('별 0개로 끝내도 그 스테이지는 해 본 것이다', () => {

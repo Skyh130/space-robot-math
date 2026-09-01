@@ -5,7 +5,15 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
 import { STAGE_ORDER, templatesFor, worldById } from './data/worlds'
 import { buildStage, stageSeed, type Question, type StageLevel } from './engine'
-import { defaultSave, loadSave, recordStage, starsOf, worldProgress, writeSave } from './state/save'
+import {
+  COINS_PER_CORRECT,
+  defaultSave,
+  loadSave,
+  recordStage,
+  starsOf,
+  worldProgress,
+  writeSave,
+} from './state/save'
 
 const WORLD = worldById(1)
 
@@ -135,7 +143,7 @@ describe('월드 1 통째로 플레이', () => {
     const save = loadSave(store)
     expect(save.parts).toEqual([WORLD.part])
     expect(worldProgress(save, 1).bossCleared).toBe(true)
-    expect(save.coins).toBe(6 * 8 * 10)
+    expect(save.coins).toBe(6 * 8 * COINS_PER_CORRECT)
   }, 180000)
 })
 

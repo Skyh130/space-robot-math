@@ -127,6 +127,7 @@ function View() {
         questions={stageAt(level, worldId)}
         label={`${meta.name} · ${level === 'boss' ? '보스' : `${String(level)}단계`}`}
         onFinish={() => undefined}
+        onQuit={() => undefined}
         {...(rule.timeLimitSeconds === undefined ? {} : { timeLimitSeconds: rule.timeLimitSeconds })}
       />
     )
@@ -196,6 +197,7 @@ function View() {
       questions={stageAt(level)}
       label={`${world.name} · ${level === 'boss' ? '보스' : `${String(level)}단계`}`}
       onFinish={() => undefined}
+      onQuit={() => undefined}
     />
   )
 }

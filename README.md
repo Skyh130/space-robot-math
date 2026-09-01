@@ -27,6 +27,20 @@ npm run build      # dist/ 에 정적 파일과 서비스 워커가 나온다
 `dist/` 를 아무 정적 호스팅에나 올리면 된다. `base` 가 `./` 라 하위 경로에 두어도
 열린다. 홈 화면에 추가하면 주소창 없이 세로로 고정돼 앱처럼 뜬다.
 
+#### GitHub Pages
+
+`.github/workflows/deploy.yml` 이 푸시할 때마다 빌드해서 올린다.
+한 번만 해 두면 되는 설정이 있다.
+
+**저장소 Settings → Pages → Source 를 `GitHub Actions` 로 바꾼다.**
+
+`Deploy from a branch` 로 두면 브랜치의 파일이 그대로 서빙되는데,
+`index.html` 이 `/src/main.tsx` 를 부르고 브라우저는 TypeScript 를 실행하지
+못하므로 빈 화면이 뜬다. 빌드한 결과를 올려야 한다.
+
+워크플로는 타입 검사와 테스트를 통과해야 배포한다. 문제가 틀린 채로 아이에게
+나가면 안 된다.
+
 아이콘을 바꾸려면 `scripts/icon.svg` 를 고치고 `npm run icons` 를 돌린다.
 PNG 를 손으로 여러 장 만들면 나중에 한 장을 빠뜨린다.
 

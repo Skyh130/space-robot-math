@@ -1,3 +1,4 @@
+import { COINS_PER_CORRECT } from '../data/economy'
 import type { RobotPart } from '../data/worlds'
 import type { SkillKey, StageLevel, WorldId } from '../engine'
 
@@ -14,10 +15,10 @@ export const SAVE_KEY = 'space-robot-math.save'
 /** 저장 형식이 바뀔 때마다 올린다. 옛 저장은 migrate 에서 손본다. */
 export const SAVE_VERSION = 1
 
-/** 한 스테이지에서 문제 하나를 맞힐 때 주는 코인. (설계서 6장 코인 보상) */
-export const COINS_PER_CORRECT = 10
-
 export const STAGES_PER_WORLD = 5
+
+// 코인 값은 상점 가격과 함께 정해야 해서 data/economy.ts 에 모아 두었다.
+export { COINS_PER_CORRECT }
 
 export type SkillStat = { readonly correct: number; readonly total: number }
 
