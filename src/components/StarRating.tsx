@@ -17,12 +17,16 @@ export function StarRating({ count, size = 'small' }: StarRatingProps) {
   )
 }
 
+/**
+ * 못 받은 별은 어두운 빈칸으로 둔다.
+ * 패널색으로 두면 보스 줄(코랄 바탕) 위에서 받은 별과 구분이 안 된다.
+ */
 function Star({ filled, className }: { filled: boolean; className: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
       <path
         d="M12 2.6l2.9 5.9 6.5.95-4.7 4.6 1.1 6.45L12 17.45 6.2 20.5l1.1-6.45-4.7-4.6 6.5-.95z"
-        fill={filled ? '#FFC93C' : '#2C3E8F'}
+        fill={filled ? '#FFC93C' : '#101838'}
         stroke="#101838"
         strokeWidth={2}
         strokeLinejoin="round"

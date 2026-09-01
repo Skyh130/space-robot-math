@@ -33,6 +33,8 @@ export type WorldProgress = {
    */
   readonly plays: readonly number[]
   readonly bossPlays: number
+  /** 도전 모드 최고 기록. 60초 안에 맞힌 문제 수다. 안 해 봤으면 0. */
+  readonly bestChallenge: number
 }
 
 export type SaveData = {
@@ -53,6 +55,7 @@ export function emptyWorld(): WorldProgress {
     bossCleared: false,
     plays: Array.from({ length: STAGES_PER_WORLD }, () => 0),
     bossPlays: 0,
+    bestChallenge: 0,
   }
 }
 
@@ -178,6 +181,7 @@ function readWorld(value: Record<string, unknown>): WorldProgress {
     bossCleared: value['bossCleared'] === true,
     plays,
     bossPlays: Math.max(0, intOr(value['bossPlays'], 0)),
+    bestChallenge: Math.max(0, intOr(value['bestChallenge'], 0)),
   }
 }
 
@@ -194,10 +198,23 @@ export function worldProgress(save: SaveData, world: WorldId): WorldProgress {
   return save.worlds[String(world)] ?? emptyWorld()
 }
 
+/** Lv1~Lv5 는 배열 자리를 갖는다. 보스와 도전 모드는 따로 센다. */
+function stageIndex(level: StageLevel): number | null {
+  return typeof level === 'number' ? level - 1 : null
+}
+
 export function starsOf(save: SaveData, world: WorldId, level: StageLevel): number {
   const progress = worldProgress(save, world)
   if (level === 'boss') return progress.bossStars
-  return progress.stars[level - 1] ?? UNPLAYED
+  const index = stageIndex(level)
+  // 도전 모드에는 별이 없다. 기록만 남는다.
+  if (index === null) return UNPLAYED
+  return progress.stars[index] ?? UNPLAYED
+}
+
+/** 도전 모드 최고 기록. */
+export function bestChallengeOf(save: SaveData, world: WorldId): number {
+  return worldProgress(save, world).bestChallenge
 }
 
 export function isStagePlayed(save: SaveData, world: WorldId, level: StageLevel): boolean {
@@ -214,7 +231,12 @@ export function isStageUnlocked(save: SaveData, world: WorldId, level: StageLeve
   if (!isWorldUnlocked(save, world)) return false
   if (level === 1) return true
   if (level === 'boss') return isStagePlayed(save, world, STAGES_PER_WORLD as StageLevel)
-  return isStagePlayed(save, world, (level - 1) as StageLevel)
+  // 도전 모드는 보스를 깨야 열린다. 다 배운 뒤에 하는 놀이다.
+  if (level === 'challenge') return worldProgress(save, world).bossCleared
+
+  const index = stageIndex(level)
+  if (index === null) return false
+  return isStagePlayed(save, world, index as StageLevel)
 }
 
 /** 앞 행성의 보스를 깨야 다음 행성이 열린다. */
@@ -227,7 +249,10 @@ export function isWorldUnlocked(save: SaveData, world: WorldId): boolean {
 export function playsOf(save: SaveData, world: WorldId, level: StageLevel): number {
   const progress = worldProgress(save, world)
   if (level === 'boss') return progress.bossPlays
-  return progress.plays[level - 1] ?? 0
+  if (level === 'challenge') return progress.bestChallenge
+  const index = stageIndex(level)
+  if (index === null) return 0
+  return progress.plays[index] ?? 0
 }
 
 /** 별을 다 합친 수. 월드맵에 보여준다. */
@@ -267,15 +292,22 @@ export function recordStage(save: SaveData, record: StageRecord): SaveData {
   let bossCleared = before.bossCleared
   let bossPlays = before.bossPlays
 
-  if (record.level === 'boss') {
+  let bestChallenge = before.bestChallenge
+
+  if (record.level === 'challenge') {
+    // 도전 모드는 별을 남기지 않는다. 최고 기록만 갱신한다.
+    bestChallenge = Math.max(bestChallenge, record.correct)
+  } else if (record.level === 'boss') {
     bossStars = Math.max(bossStars, record.stars)
     // 별을 하나라도 받아야 보스를 깬 것으로 본다
     bossCleared = bossCleared || record.stars >= 1
     bossPlays += 1
   } else {
-    const index = record.level - 1
-    stars[index] = Math.max(stars[index] ?? UNPLAYED, record.stars)
-    plays[index] = (plays[index] ?? 0) + 1
+    const index = stageIndex(record.level)
+    if (index !== null) {
+      stars[index] = Math.max(stars[index] ?? UNPLAYED, record.stars)
+      plays[index] = (plays[index] ?? 0) + 1
+    }
   }
 
   const skillStats: Record<string, SkillStat> = { ...save.skillStats }
@@ -296,7 +328,10 @@ export function recordStage(save: SaveData, record: StageRecord): SaveData {
     version: SAVE_VERSION,
     parts,
     coins: save.coins + record.correct * COINS_PER_CORRECT,
-    worlds: { ...save.worlds, [key]: { stars, bossStars, bossCleared, plays, bossPlays } },
+    worlds: {
+      ...save.worlds,
+      [key]: { stars, bossStars, bossCleared, plays, bossPlays, bestChallenge },
+    },
     skillStats,
   }
 }

@@ -4,6 +4,7 @@ import { describeIssues, findTemplateIssues } from '../engine/validate'
 import { generateQuestion } from '../engine/generator'
 import { readNumberKo } from '../engine/korean'
 import {
+  ORDER_ENDS,
   w1BossSort3,
   w1BossSort4,
   w1Lv1ReadNumber,
@@ -153,24 +154,77 @@ describe('Lv4 — 크기 비교', () => {
 })
 
 describe('Lv5 — 숫자 카드로 수 만들기', () => {
-  it('카드를 재배열한 수가 정답이다', () => {
+  it('카드를 눌러 놓는 문제다. 숫자패드로 치게 하지 않는다', () => {
+    expect(w1Lv5MakeNumber.inputType).toBe('order')
+  })
+
+  it('정답은 카드를 앞자리부터 늘어놓은 순서다', () => {
     for (const seed of SEEDS) {
       const q = generateQuestion(w1Lv5MakeNumber, seed)
       const p = q.params as Record<string, number>
       const cards = [p['c1'], p['c2'], p['c3']] as number[]
-      const answerDigits = String(q.answer).split('').map(Number)
-      expect([...answerDigits].sort()).toEqual([...cards].sort())
+      const answer = q.answer as number[]
+
+      // 카드를 하나도 빠뜨리거나 더하지 않는다
+      expect([...answer].sort()).toEqual([...cards].sort())
+
       const isLargest = p['want'] === 1
-      const expected = [...cards].sort((a, b) => (isLargest ? b - a : a - b)).join('')
-      expect(String(q.answer), q.prompt).toBe(expected)
+      expect(answer, q.prompt).toEqual(
+        [...cards].sort((a, b) => (isLargest ? b - a : a - b)),
+      )
     }
   })
 
-  it('세 자리 수가 나온다. 앞자리가 0이 되지 않는다', () => {
+  it('가장 큰 수는 내림차순, 가장 작은 수는 오름차순이다', () => {
     for (const seed of SEEDS) {
       const q = generateQuestion(w1Lv5MakeNumber, seed)
-      expect(String(q.answer)).toHaveLength(3)
+      const answer = q.answer as number[]
+      const isLargest = (q.params['want'] as number) === 1
+      for (let i = 1; i < answer.length; i += 1) {
+        const before = answer[i - 1] as number
+        const now = answer[i] as number
+        if (isLargest) expect(before).toBeGreaterThan(now)
+        else expect(before).toBeLessThan(now)
+      }
     }
+  })
+
+  it('카드 세 장이 모두 다르다. 같은 숫자가 있으면 놓을 자리가 헷갈린다', () => {
+    for (const seed of SEEDS) {
+      const q = generateQuestion(w1Lv5MakeNumber, seed)
+      expect(new Set(q.answer as number[]).size).toBe(3)
+    }
+  })
+
+  it('카드가 문제 문장에 그대로 보인다', () => {
+    for (const seed of SEEDS) {
+      const q = generateQuestion(w1Lv5MakeNumber, seed)
+      const shown = (q.prompt.split('\n')[1] ?? '').split(', ').map(Number)
+      expect([...shown].sort()).toEqual([...(q.answer as number[])].sort())
+    }
+  })
+
+  it('0이 없어 앞자리가 0이 되는 일이 없다', () => {
+    for (const seed of SEEDS) {
+      for (const card of generateQuestion(w1Lv5MakeNumber, seed).answer as number[]) {
+        expect(card).toBeGreaterThanOrEqual(1)
+      }
+    }
+  })
+})
+
+describe('순서 배열 방향 안내', () => {
+  it('순서 배열 문제마다 양끝에 무엇이 오는지 적어 둔다', () => {
+    for (const template of world1Templates) {
+      if (template.inputType !== 'order') continue
+      expect(ORDER_ENDS[template.id], template.id).toBeDefined()
+      expect(ORDER_ENDS[template.id]).toHaveLength(2)
+    }
+  })
+
+  it('숫자 카드는 자릿수를, 좌표 정렬은 크기를 알려 준다', () => {
+    expect(ORDER_ENDS['w1_lv5_make']).toEqual(['백의 자리', '일의 자리'])
+    expect(ORDER_ENDS['w1_boss_sort3']).toEqual(['작은 수', '큰 수'])
   })
 })
 

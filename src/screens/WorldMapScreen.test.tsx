@@ -98,7 +98,8 @@ describe('WorldMapScreen — 단계 목록', () => {
     render(
       <WorldMapScreen save={defaultSave()} openWorld={1} onOpenWorld={noop} onPlay={noop} />,
     )
-    expect(screen.getAllByLabelText('잠김')).toHaveLength(5)
+    // Lv2~Lv5, 보스, 60초 도전
+    expect(screen.getAllByLabelText('잠김')).toHaveLength(6)
     expect(screen.getByRole('button', { name: /^2단계/ })).toBeDisabled()
   })
 
@@ -119,5 +120,71 @@ describe('WorldMapScreen — 단계 목록', () => {
     )
     await user.click(screen.getByRole('button', { name: '우주로' }))
     expect(onOpenWorld).toHaveBeenCalledWith(null)
+  })
+})
+
+describe('WorldMapScreen — 60초 도전', () => {
+  it('보스를 깨기 전에는 잠겨 있다', () => {
+    render(<WorldMapScreen save={played()} openWorld={1} onOpenWorld={noop} onPlay={noop} />)
+    expect(screen.getByRole('button', { name: /60초 도전/ })).toBeDisabled()
+  })
+
+  it('보스를 깨면 열린다', () => {
+    const save = recordStage(played(), {
+      world: 1,
+      level: 'boss',
+      stars: 3,
+      correct: 8,
+      skillLog: [],
+      part: 'head',
+    })
+    render(<WorldMapScreen save={save} openWorld={1} onOpenWorld={noop} onPlay={noop} />)
+    expect(screen.getByRole('button', { name: /60초 도전/ })).toBeEnabled()
+    expect(screen.getByText('기록 없음')).toBeInTheDocument()
+  })
+
+  it('최고 기록을 보여준다', () => {
+    let save = recordStage(played(), {
+      world: 1,
+      level: 'boss',
+      stars: 3,
+      correct: 8,
+      skillLog: [],
+      part: 'head',
+    })
+    save = recordStage(save, { world: 1, level: 'challenge', stars: 0, correct: 17, skillLog: [] })
+    render(<WorldMapScreen save={save} openWorld={1} onOpenWorld={noop} onPlay={noop} />)
+    expect(screen.getByText('최고 17개')).toBeInTheDocument()
+  })
+
+  it('누르면 도전 모드를 연다', async () => {
+    const user = userEvent.setup()
+    const onPlay = vi.fn()
+    const save = recordStage(played(), {
+      world: 1,
+      level: 'boss',
+      stars: 3,
+      correct: 8,
+      skillLog: [],
+      part: 'head',
+    })
+    render(<WorldMapScreen save={save} openWorld={1} onOpenWorld={noop} onPlay={onPlay} />)
+
+    await user.click(screen.getByRole('button', { name: /60초 도전/ }))
+    expect(onPlay).toHaveBeenCalledWith(1, 'challenge')
+  })
+
+  it('별이 아니라 기록이 붙는다. 배우는 스테이지와 구분된다', () => {
+    const save = recordStage(played(), {
+      world: 1,
+      level: 'boss',
+      stars: 3,
+      correct: 8,
+      skillLog: [],
+      part: 'head',
+    })
+    render(<WorldMapScreen save={save} openWorld={1} onOpenWorld={noop} onPlay={noop} />)
+    const challenge = screen.getByRole('button', { name: /60초 도전/ })
+    expect(challenge.querySelector('svg[aria-label]')).toBeNull()
   })
 })

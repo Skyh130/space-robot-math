@@ -472,3 +472,113 @@ describe('Phase 6 — 격납고와 부품 획득', () => {
     expect(screen.getByLabelText('헤드 유닛 자리')).toBeInTheDocument()
   })
 })
+
+describe('60초 도전 (재미 구간)', () => {
+  /** 월드 1을 보스까지 깬 저장. 도전 모드가 열려 있다. */
+  function clearedWorld1(): Storage {
+    const store = fakeStorage()
+    let save = defaultSave()
+    for (const level of STAGE_ORDER) {
+      save = recordStage(save, {
+        world: 1,
+        level,
+        stars: 3,
+        correct: 8,
+        skillLog: [],
+        ...(level === 'boss' ? { part: WORLD.part } : {}),
+      })
+    }
+    writeSave(save, store)
+    return store
+  }
+
+  it('보스를 깨야 목록에 열린다', async () => {
+    const user = userEvent.setup()
+    render(<App storage={fakeStorage()} />)
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    expect(key(/60초 도전/)).toBeDisabled()
+  })
+
+  it('시간을 재고 맞힌 개수를 센다. 남은 문제 수를 보여주지 않는다', async () => {
+    const user = userEvent.setup()
+    render(<App storage={clearedWorld1()} />)
+
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    await user.click(key(/60초 도전/))
+
+    expect(screen.getByLabelText(/남은 시간 \d+초/)).toBeInTheDocument()
+    expect(screen.getByLabelText('지금까지 0개')).toBeInTheDocument()
+    // 40개 남았다고 알려 주면 기가 죽는다
+    expect(screen.queryByLabelText(/문제 중/)).toBeNull()
+  })
+
+  it('맞히면 점수가 올라간다', async () => {
+    const user = userEvent.setup()
+    render(<App storage={clearedWorld1()} />)
+
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    await user.click(key(/60초 도전/))
+
+    const questions = buildStage(
+      templatesFor(WORLD, 'challenge'),
+      stageSeed(1, 'challenge', 0),
+      { count: 40 },
+    )
+    const first = questions[0] as Question
+    if (first.inputType === 'choice') {
+      await user.click(key(String(first.answer)))
+    } else {
+      for (const digit of String(first.answer)) await user.click(key(digit))
+      await user.click(key('확인'))
+    }
+
+    await waitFor(() => expect(screen.getByLabelText('지금까지 1개')).toBeInTheDocument(), {
+      timeout: 3000,
+    })
+  }, 30000)
+
+  it('순서 배열 문제는 내지 않는다. 손이 느리면 아는데도 점수를 못 낸다', () => {
+    for (const template of templatesFor(WORLD, 'challenge')) {
+      expect(template.inputType, template.id).not.toBe('order')
+    }
+    expect(templatesFor(WORLD, 'challenge').length).toBeGreaterThan(0)
+  })
+
+  it('그 월드에서 배운 것을 두루 섞는다', () => {
+    const levels = new Set(templatesFor(WORLD, 'challenge').map((t) => t.level))
+    expect(levels.size).toBeGreaterThanOrEqual(3)
+  })
+
+  it('별도 부품도 주지 않는다. 진행과 무관한 놀이다', async () => {
+    const user = userEvent.setup()
+    const store = clearedWorld1()
+    const before = loadSave(store)
+
+    render(<App storage={store} />)
+    await user.click(key('출발!'))
+    await user.click(key(new RegExp(`^${WORLD.name}`)))
+    await user.click(key(/60초 도전/))
+
+    // 아무것도 안 풀고 시간이 끝나기를 기다리는 대신, 저장이 그대로인지만 본다
+    const after = loadSave(store)
+    expect(after.parts).toEqual(before.parts)
+    expect(worldProgress(after, 1).stars).toEqual(worldProgress(before, 1).stars)
+  })
+
+  it('배우는 스테이지에는 여전히 타이머가 없다', async () => {
+    const user = userEvent.setup()
+
+    for (const level of STAGE_ORDER) {
+      const view = render(<App storage={clearedWorld1()} />)
+      await user.click(key('출발!'))
+      await user.click(key(new RegExp(`^${WORLD.name}`)))
+      await user.click(key(level === 'boss' ? /^보스/ : new RegExp(`^${String(level)}단계`)))
+
+      expect(screen.queryByLabelText(/남은 시간/), String(level)).toBeNull()
+      view.unmount()
+    }
+  }, 120000)
+})

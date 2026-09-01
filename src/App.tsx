@@ -1,7 +1,14 @@
 import { useState } from 'react'
 
 import { AppShell } from './components/AppShell'
-import { STAGE_ORDER, stageRuleFor, templatesFor, WORLDS, worldById } from './data/worlds'
+import {
+  isChallenge,
+  STAGE_ORDER,
+  stageRuleFor,
+  templatesFor,
+  WORLDS,
+  worldById,
+} from './data/worlds'
 import { buildStage, stageSeed, starsFor, type StageLevel, type WorldId } from './engine'
 import { HangarScreen } from './screens/HangarScreen'
 import { PartRewardScreen } from './screens/PartRewardScreen'
@@ -9,7 +16,7 @@ import { ResultScreen } from './screens/ResultScreen'
 import { StageScreen, type StageOutcome } from './screens/StageScreen'
 import { TitleScreen } from './screens/TitleScreen'
 import { WorldMapScreen } from './screens/WorldMapScreen'
-import { playsOf } from './state/save'
+import { bestChallengeOf, playsOf } from './state/save'
 import { ProgressProvider, useProgress } from './state/useProgress'
 
 /**
@@ -32,6 +39,8 @@ type Route =
       outcome: StageOutcome
       /** 이 판에서 부품을 처음 받았는지. 받았다면 결과 다음에 획득 연출이 온다. */
       newPart: boolean
+      /** 도전 모드에 들어가기 전의 최고 기록. 신기록인지 가리는 데 쓴다. */
+      bestBefore: number
     }
 
 export default function App({ storage }: { storage?: Storage }) {
@@ -98,12 +107,14 @@ function Router() {
         {...(rule.timeLimitSeconds === undefined
           ? {}
           : { timeLimitSeconds: rule.timeLimitSeconds })}
+        countUp={isChallenge(route.level)}
         label={`${world.name} · ${levelLabel(route.level)}`}
         onQuit={() => setRoute({ name: 'map', openWorld: route.world })}
         onFinish={(outcome) => {
           const stars = starsFor(outcome.correct, outcome.total, rule.starThresholds)
           const hadPart = save.parts.includes(world.part)
-          const next = finishStage({
+          const bestBefore = bestChallengeOf(save, route.world)
+          finishStage({
             world: route.world,
             level: route.level,
             stars,
@@ -116,7 +127,8 @@ function Router() {
             name: 'result',
             outcome,
             // 이미 가진 부품을 또 받는 연출은 하지 않는다
-            newPart: !hadPart && next.parts.includes(world.part),
+            newPart: route.level === 'boss' && stars >= 1 && !hadPart,
+            bestBefore,
           })
         }}
       />
@@ -124,13 +136,34 @@ function Router() {
   }
 
   const world = worldById(route.world)
-  const stars = starsFor(
-    route.outcome.correct,
-    route.outcome.total,
-    stageRuleFor(route.world, route.level).starThresholds,
-  )
+  const rule = stageRuleFor(route.world, route.level)
+  const stars = starsFor(route.outcome.correct, route.outcome.total, rule.starThresholds)
   const nextLevel = STAGE_ORDER[STAGE_ORDER.indexOf(route.level) + 1]
   const gotPart = route.level === 'boss' && stars >= 1
+
+  // 도전 모드는 별도 부품도 없다. 기록만 남는다.
+  if (isChallenge(route.level)) {
+    return (
+      <ResultScreen
+        correct={route.outcome.correct}
+        total={route.outcome.total}
+        challenge={{
+          best: Math.max(route.bestBefore, route.outcome.correct),
+          isRecord: route.outcome.correct > route.bestBefore,
+        }}
+        nextLabel="우주로"
+        onRetry={() =>
+          setRoute({
+            name: 'stage',
+            world: route.world,
+            level: route.level,
+            attempt: route.attempt + 1,
+          })
+        }
+        onNext={() => setRoute({ name: 'map', openWorld: route.world })}
+      />
+    )
+  }
 
   return (
     <ResultScreen
@@ -138,26 +171,37 @@ function Router() {
       total={route.outcome.total}
       {...(gotPart ? { earnedPart: world.partName } : {})}
       nextLabel={route.newPart ? '부품 받기' : nextLevel === undefined ? '우주로' : '다음 단계'}
-      onRetry={() => setRoute({ name: 'stage', world: route.world, level: route.level, attempt: route.attempt + 1 })}
+      onRetry={() =>
+        setRoute({
+          name: 'stage',
+          world: route.world,
+          level: route.level,
+          attempt: route.attempt + 1,
+        })
+      }
       onNext={() =>
         setRoute(
           route.newPart
             ? { name: 'reward', world: route.world }
             : nextLevel === undefined
-            ? { name: 'map', openWorld: route.world }
-            : {
-                name: 'stage',
-                world: route.world,
-                level: nextLevel,
-                attempt: playsOf(save, route.world, nextLevel),
-              },
+              ? { name: 'map', openWorld: route.world }
+              : {
+                  name: 'stage',
+                  world: route.world,
+                  level: nextLevel,
+                  attempt: playsOf(save, route.world, nextLevel),
+                },
         )
       }
-      {...(nextLevel === undefined ? {} : { onMap: () => setRoute({ name: 'map', openWorld: route.world }) })}
+      {...(nextLevel === undefined
+        ? {}
+        : { onMap: () => setRoute({ name: 'map', openWorld: route.world }) })}
     />
   )
 }
 
 function levelLabel(level: StageLevel): string {
-  return level === 'boss' ? '보스' : `${String(level)}단계`
+  if (level === 'boss') return '보스'
+  if (level === 'challenge') return '60초 도전'
+  return `${String(level)}단계`
 }

@@ -326,27 +326,29 @@ function otherNumber(a: number, gap: number, sign: number, sameKind: number): nu
 // Lv5 — 숫자 카드로 조건에 맞는 수 만들기
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * 카드를 실제로 집어 자리에 놓는다.
+ *
+ * "가장 큰 세 자리 수는?" 을 읽고 머릿속으로 배열해 숫자패드로 치게 하면,
+ * 답을 알아도 무엇을 하라는 건지 모른다. 카드를 순서대로 눌러 놓게 하면
+ * 문장을 못 읽어도 할 일이 보이고, 앞자리에 큰 수를 놓는다는 것도 손으로 익는다.
+ */
 export const w1Lv5MakeNumber: AnyQuestionTemplate = defineTemplate({
   id: 'w1_lv5_make',
   world: 1,
   level: 5,
   skill: 'number_make',
-  inputType: 'numpad',
+  inputType: 'order',
   // want 1 = 가장 큰 수, 0 = 가장 작은 수
   params: { c1: [1, 9], c2: [1, 9], c3: [1, 9], want: [0, 1] },
   // 카드에 같은 숫자가 있으면 "카드로 만들 수 있는 수"가 헷갈린다
   valid: (p) => p.c1 !== p.c2 && p.c2 !== p.c3 && p.c1 !== p.c3,
   render: (p) => {
-    const cards = [p.c1, p.c2, p.c3].join(', ')
     const goal = p.want === 1 ? '가장 큰' : '가장 작은'
-    return `숫자 카드\n${cards}\n${goal} 세 자리 수는?`
+    return `카드를 놓아 ${goal} 수를 만들어 줘.\n${[p.c1, p.c2, p.c3].join(', ')}`
   },
-  answer: (p) => {
-    const cards = [p.c1, p.c2, p.c3].sort((left, right) =>
-      p.want === 1 ? right - left : left - right,
-    )
-    return Number(cards.join(''))
-  },
+  answer: (p) =>
+    [p.c1, p.c2, p.c3].sort((left, right) => (p.want === 1 ? right - left : left - right)),
   hint: (p) =>
     p.want === 1
       ? '큰 숫자를 앞자리에 놓으면 수가 커져.'
@@ -358,6 +360,13 @@ export const w1Lv5MakeNumber: AnyQuestionTemplate = defineTemplate({
     return { kind: 'placeValue', value: Number(cards.join('')) }
   },
 })
+
+/** 이 템플릿에서 빈칸 위에 붙일 방향 안내. */
+export const ORDER_ENDS: Readonly<Record<string, readonly [string, string]>> = {
+  w1_lv5_make: ['백의 자리', '일의 자리'],
+  w1_boss_sort3: ['작은 수', '큰 수'],
+  w1_boss_sort4: ['작은 수', '큰 수'],
+}
 
 // ─────────────────────────────────────────────────────────────
 // 보스 — 흩어진 좌표를 크기 순으로 정렬해 항로 열기

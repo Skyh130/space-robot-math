@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { ChoiceGrid } from '../components/ChoiceGrid'
+import { ORDER_ENDS } from '../data/world1'
 import { Feedback } from '../components/Feedback'
 import { HintVisualView } from '../components/HintVisual'
 import { NumPad } from '../components/NumPad'
@@ -40,8 +41,14 @@ type StageScreenProps = {
   onQuit?: () => void
   /** 오답을 3문제 뒤에 숫자만 바꿔 다시 내기 위해 필요하다. */
   templates?: readonly AnyQuestionTemplate[]
-  /** 시간 제한. W3 보스에만 있다. */
+  /** 시간 제한. W3 보스와 도전 모드에 있다. */
   timeLimitSeconds?: number
+  /**
+   * 남은 문제 수 대신 맞힌 수를 센다.
+   * 도전 모드는 문제를 넉넉히 쌓아 두고 시간이 끝을 정하므로, 남은 개수를
+   * 보여주면 끝없이 남은 것처럼 보여 기가 죽는다.
+   */
+  countUp?: boolean
 }
 
 /** 시간 제한이 있는 판에서 피드백을 보여주는 시간. */
@@ -61,6 +68,7 @@ export function StageScreen({
   onQuit,
   templates,
   timeLimitSeconds,
+  countUp = false,
 }: StageScreenProps) {
   const [questions, setQuestions] = useState<readonly Question[]>(initialQuestions)
   const [index, setIndex] = useState(0)
@@ -197,7 +205,11 @@ export function StageScreen({
             <TimerBar remainingSeconds={remaining} totalSeconds={timeLimitSeconds ?? 0} />
           </div>
         ) : null}
-        <ProgressDots total={questions.length} current={index} correct={correctIndexes} />
+        {countUp ? (
+          <ScoreCounter score={correctIndexes.length} />
+        ) : (
+          <ProgressDots total={questions.length} current={index} correct={correctIndexes} />
+        )}
       </header>
 
       <QuestionCard prompt={question.prompt} />
@@ -222,6 +234,34 @@ export function StageScreen({
         />
       )}
     </div>
+  )
+}
+
+/** 도전 모드에서 지금까지 몇 개를 맞혔는지. 올라가기만 하므로 볼 때마다 기분이 좋다. */
+function ScoreCounter({ score }: { score: number }) {
+  return (
+    <div
+      className="flex items-center gap-2"
+      aria-label={`지금까지 ${String(score)}개`}
+      role="status"
+      aria-live="polite"
+    >
+      <CoreIcon />
+      <span className="text-number font-bold tabular-nums text-energy">{score}</span>
+    </div>
+  )
+}
+
+function CoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-7 w-7" aria-hidden="true">
+      <circle cx={12} cy={12} r={9} fill="#FFC93C" stroke="#101838" strokeWidth={3} />
+      <path
+        d="M12 6.5l1.9 3.9 4.3.6-3.1 3 .7 4.2-3.8-2-3.8 2 .7-4.2-3.1-3 4.3-.6z"
+        fill="#101838"
+        opacity={0.25}
+      />
+    </svg>
   )
 }
 
@@ -324,6 +364,9 @@ function InputArea({
           // 문제가 바뀌면 고른 순서를 비운다
           key={question.id}
           items={orderItems(question)}
+          {...(ORDER_ENDS[question.templateId] === undefined
+            ? {}
+            : { ends: ORDER_ENDS[question.templateId] })}
           onSubmit={(order) => onSubmit(order)}
         />
       )

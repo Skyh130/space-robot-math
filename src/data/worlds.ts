@@ -46,9 +46,34 @@ export function worldById(id: WorldId): WorldMeta {
 /** 한 월드의 스테이지 차례. Lv1~Lv5 다음이 보스다. */
 export const STAGE_ORDER: readonly StageLevel[] = [1, 2, 3, 4, 5, 'boss']
 
+/** 도전 모드. 보스를 깨야 열리며 진행과는 무관하다. */
+export const CHALLENGE: StageLevel = 'challenge'
+
+/** 도전 모드 제한 시간(초). */
+export const CHALLENGE_SECONDS = 60
+
+/**
+ * 도전 모드에서 60초 안에 만날 수 있는 문제 수의 상한.
+ * 다 풀 일은 없지만, 시간이 남는데 문제가 떨어지면 안 된다.
+ */
+const CHALLENGE_POOL = 40
+
 /** 그 스테이지에서 낼 템플릿들. */
 export function templatesFor(world: WorldMeta, level: StageLevel): readonly AnyQuestionTemplate[] {
+  if (level === CHALLENGE) return challengeTemplates(world)
   return world.templates.filter((template) => template.level === level)
+}
+
+/**
+ * 도전 모드에 낼 템플릿. 그 월드에서 배운 것을 통째로 섞는다.
+ *
+ * 순서 배열은 빼둔다. 조각을 여러 번 눌러야 해서 60초 안에서는 손이 느린 아이가
+ * 문제를 아는데도 점수를 못 낸다. 시간을 재는 곳에서는 아는지만 물어야 한다.
+ */
+function challengeTemplates(world: WorldMeta): readonly AnyQuestionTemplate[] {
+  return world.templates.filter(
+    (template) => template.inputType === 'choice' || template.inputType === 'numpad',
+  )
 }
 
 /**
@@ -71,11 +96,23 @@ const SPECIAL_RULES: Readonly<Record<string, StageRule>> = {
   '3:boss': { count: 12, timeLimitSeconds: 60, starThresholds: [8, 10, 12] },
 }
 
+/** 도전 모드는 어느 월드든 같은 규칙이다. 60초, 맞힌 만큼이 점수다. */
+const CHALLENGE_RULE: StageRule = {
+  count: CHALLENGE_POOL,
+  timeLimitSeconds: CHALLENGE_SECONDS,
+}
+
 export function stageRuleFor(world: WorldId, level: StageLevel): StageRule {
+  if (level === CHALLENGE) return CHALLENGE_RULE
   return SPECIAL_RULES[`${String(world)}:${String(level)}`] ?? DEFAULT_RULE
 }
 
 /** 이 월드를 실제로 플레이할 수 있는지. 템플릿이 아직 없는 월드는 잠겨 있다. */
 export function isPlayable(world: WorldMeta): boolean {
   return STAGE_ORDER.every((level) => templatesFor(world, level).length > 0)
+}
+
+/** 배우는 스테이지인지. 도전 모드는 별도 취급이라 별도 코인도 다르게 준다. */
+export function isChallenge(level: StageLevel): boolean {
+  return level === CHALLENGE
 }

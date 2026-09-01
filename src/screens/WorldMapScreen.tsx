@@ -1,7 +1,8 @@
 import { StarRating } from '../components/StarRating'
-import { isPlayable, STAGE_ORDER, WORLDS, type WorldMeta } from '../data/worlds'
+import { CHALLENGE, isPlayable, STAGE_ORDER, WORLDS, type WorldMeta } from '../data/worlds'
 import type { StageLevel, WorldId } from '../engine'
 import {
+  bestChallengeOf,
   isStageUnlocked,
   isWorldUnlocked,
   starsOf,
@@ -194,6 +195,8 @@ function StageList({
             </button>
           )
         })}
+
+        <ChallengeRow world={world} save={save} onPlay={onPlay} />
       </div>
 
       <button
@@ -208,6 +211,66 @@ function StageList({
         우주로
       </button>
     </div>
+  )
+}
+
+/**
+ * 도전 모드 줄.
+ *
+ * 보스를 깨야 열린다. 배우는 스테이지와 확실히 구분되게 색과 모양을 다르게 두었다.
+ * 별이 아니라 최고 기록이 붙는다.
+ */
+function ChallengeRow({
+  world,
+  save,
+  onPlay,
+}: {
+  world: WorldMeta
+  save: SaveData
+  onPlay: (world: WorldId, level: StageLevel) => void
+}) {
+  const unlocked = isStageUnlocked(save, world.id, CHALLENGE)
+  const best = bestChallengeOf(save, world.id)
+
+  return (
+    <button
+      type="button"
+      onClick={() => onPlay(world.id, CHALLENGE)}
+      disabled={!unlocked}
+      className={`
+        mt-1 flex min-h-touch items-center justify-between rounded-2xl border-3 border-energy
+        bg-panel px-4 py-3 shadow-hard transition-transform
+        active:translate-y-1 active:shadow-none
+        disabled:translate-y-1 disabled:border-outline disabled:shadow-none
+        ${unlocked ? '' : 'opacity-50'}
+      `}
+    >
+      <span className="flex items-center gap-2">
+        <BoltIcon />
+        <span className="font-title text-xl text-energy">60초 도전</span>
+      </span>
+      {unlocked ? (
+        <span className="text-base font-bold text-paper">
+          {best > 0 ? `최고 ${best}개` : '기록 없음'}
+        </span>
+      ) : (
+        <LockIcon />
+      )}
+    </button>
+  )
+}
+
+function BoltIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+      <path
+        d="M13.5 2L4 14h6l-.5 8L20 10h-6.5z"
+        fill="#FFC93C"
+        stroke="#101838"
+        strokeWidth={2.5}
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 

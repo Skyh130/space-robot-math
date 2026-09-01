@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
+  bestChallengeOf,
   clearSave,
   COINS_PER_CORRECT,
   defaultSave,
@@ -333,5 +334,102 @@ describe('다시 하기 시드', () => {
     expect(playsOf(save, 1, 1)).toBe(1)
     expect(playsOf(save, 1, 2)).toBe(1)
     expect(playsOf(save, 1, 3)).toBe(0)
+  })
+})
+
+describe('60초 도전', () => {
+  function clearedWorld1(): SaveData {
+    let save = defaultSave()
+    for (const level of [1, 2, 3, 4, 5] as const) {
+      save = recordStage(save, { world: 1, level, stars: 3, correct: 8, skillLog: [] })
+    }
+    return recordStage(save, {
+      world: 1,
+      level: 'boss',
+      stars: 3,
+      correct: 8,
+      skillLog: [],
+      part: 'head',
+    })
+  }
+
+  it('보스를 깨야 열린다', () => {
+    let save = defaultSave()
+    expect(isStageUnlocked(save, 1, 'challenge')).toBe(false)
+
+    // Lv1~Lv5 를 다 해도 보스를 안 깼으면 아직이다
+    for (const level of [1, 2, 3, 4, 5] as const) {
+      save = recordStage(save, { world: 1, level, stars: 3, correct: 8, skillLog: [] })
+    }
+    expect(isStageUnlocked(save, 1, 'challenge')).toBe(false)
+
+    save = recordStage(save, {
+      world: 1,
+      level: 'boss',
+      stars: 1,
+      correct: 6,
+      skillLog: [],
+      part: 'head',
+    })
+    expect(isStageUnlocked(save, 1, 'challenge')).toBe(true)
+  })
+
+  it('맞힌 개수가 최고 기록으로 남는다', () => {
+    let save = clearedWorld1()
+    expect(bestChallengeOf(save, 1)).toBe(0)
+
+    save = recordStage(save, { world: 1, level: 'challenge', stars: 0, correct: 14, skillLog: [] })
+    expect(bestChallengeOf(save, 1)).toBe(14)
+  })
+
+  it('기록을 못 넘으면 예전 기록이 남는다', () => {
+    let save = clearedWorld1()
+    save = recordStage(save, { world: 1, level: 'challenge', stars: 0, correct: 20, skillLog: [] })
+    save = recordStage(save, { world: 1, level: 'challenge', stars: 0, correct: 11, skillLog: [] })
+    expect(bestChallengeOf(save, 1)).toBe(20)
+  })
+
+  it('별을 주지 않는다. 배우는 스테이지가 아니다', () => {
+    let save = clearedWorld1()
+    const before = totalStars(save)
+    save = recordStage(save, { world: 1, level: 'challenge', stars: 3, correct: 30, skillLog: [] })
+    expect(totalStars(save)).toBe(before)
+    expect(starsOf(save, 1, 'challenge')).toBe(-1)
+  })
+
+  it('진행을 건드리지 않는다. 보스 기록도 그대로다', () => {
+    const before = clearedWorld1()
+    const after = recordStage(before, {
+      world: 1,
+      level: 'challenge',
+      stars: 0,
+      correct: 25,
+      skillLog: [],
+    })
+    expect(worldProgress(after, 1).stars).toEqual(worldProgress(before, 1).stars)
+    expect(worldProgress(after, 1).bossStars).toBe(worldProgress(before, 1).bossStars)
+    expect(after.parts).toEqual(before.parts)
+  })
+
+  it('코인은 준다. 맞힌 만큼이다', () => {
+    const before = clearedWorld1()
+    const after = recordStage(before, {
+      world: 1,
+      level: 'challenge',
+      stars: 0,
+      correct: 18,
+      skillLog: [],
+    })
+    expect(after.coins - before.coins).toBe(18 * COINS_PER_CORRECT)
+  })
+
+  it('옛 저장에는 기록이 없으니 0으로 본다', () => {
+    const save = migrate({ worlds: { '1': { stars: [3, 3, 3, 3, 3], bossCleared: true } } })
+    expect(bestChallengeOf(save, 1)).toBe(0)
+  })
+
+  it('말이 안 되는 기록은 다듬는다', () => {
+    const save = migrate({ worlds: { '1': { bestChallenge: -5 } } })
+    expect(bestChallengeOf(save, 1)).toBe(0)
   })
 })

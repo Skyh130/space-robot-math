@@ -44,6 +44,23 @@ function playedSave() {
   return save
 }
 
+/** 보스까지 깬 저장. 도전 모드가 열린 모습을 보려면 필요하다. */
+function clearedSave() {
+  let save = playedSave()
+  for (const level of [4, 5] as const) {
+    save = recordStage(save, { world: 1, level, stars: 3, correct: 8, skillLog: [] })
+  }
+  save = recordStage(save, {
+    world: 1,
+    level: 'boss',
+    stars: 3,
+    correct: 8,
+    skillLog: [],
+    part: 'head',
+  })
+  return recordStage(save, { world: 1, level: 'challenge', stars: 0, correct: 17, skillLog: [] })
+}
+
 function View() {
   if (screen === 'hangar') {
     return (
@@ -86,6 +103,31 @@ function View() {
     )
   }
 
+  if (screen === 'stages-cleared') {
+    return (
+      <WorldMapScreen
+        save={clearedSave()}
+        openWorld={1}
+        onOpenWorld={() => undefined}
+        onPlay={() => undefined}
+      />
+    )
+  }
+
+  if (screen === 'challenge') {
+    const templates = templatesFor(world, 'challenge')
+    return (
+      <StageScreen
+        questions={buildStage(templates, stageSeed(1, 'challenge', 0), { count: 40 })}
+        label={`${world.name} · 60초 도전`}
+        onFinish={() => undefined}
+        onQuit={() => undefined}
+        timeLimitSeconds={60}
+        countUp
+      />
+    )
+  }
+
   if (screen === 'stages') {
     return (
       <WorldMapScreen
@@ -99,6 +141,19 @@ function View() {
 
   if (screen === 'title') {
     return <TitleScreen onStart={() => undefined} />
+  }
+
+  if (screen === 'challenge-result') {
+    return (
+      <ResultScreen
+        correct={19}
+        total={40}
+        challenge={{ best: 19, isRecord: true }}
+        nextLabel="우주로"
+        onRetry={() => undefined}
+        onNext={() => undefined}
+      />
+    )
   }
 
   if (screen === 'result') {
