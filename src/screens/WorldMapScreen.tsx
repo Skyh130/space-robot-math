@@ -67,7 +67,10 @@ export function WorldMapScreen({
         min-h-0 이 없으면 행성 여덟 칸이 제 높이를 고집해 작은 폰에서 화면이 넘친다.
         남는 공간만 쓰고, 모자라면 이 안에서만 스크롤한다.
       */}
-      <div className="grid min-h-0 flex-1 grid-cols-2 content-start gap-2.5 overflow-y-auto">
+      <div
+        data-scrollable
+        className="grid min-h-0 flex-1 grid-cols-2 content-start gap-2.5 overflow-y-auto"
+      >
         {WORLDS.map((world) => (
           <PlanetCard
             key={world.id}
@@ -184,7 +187,14 @@ function StageList({
         <p className="text-sm text-paper/70">{world.topic}</p>
       </header>
 
-      <div className="flex flex-1 flex-col justify-center gap-2.5">
+      {/*
+        스테이지 일곱 줄이다. 세로가 짧은 기기에서는 다 담기지 않으므로
+        이 목록 안에서만 스크롤한다. 화면 전체가 밀리는 것보다 낫다.
+      */}
+      <div
+        data-scrollable
+        className="flex min-h-0 flex-1 flex-col justify-center gap-2.5 overflow-y-auto short:justify-start short:gap-2"
+      >
         {STAGE_ORDER.map((level) => {
           const unlocked = isStageUnlocked(save, world.id, level)
           const stars = starsOf(save, world.id, level)

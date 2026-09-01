@@ -3,23 +3,40 @@
  *
  * "스크롤 없이 한 화면에 문제 하나가 다 들어와야 한다"는 눈으로만 확인할 수 없다.
  * 각 화면을 harness.html 로 고정된 상태로 띄운 뒤, 스크롤 발생·터치 타깃 크기·
- * 글자 크기·화면 밖으로 나간 요소를 실제 렌더 결과에서 잰다.
+ * 글자 크기·화면 밖으로 나간 요소·상자 안에서 잘린 내용을 실제 렌더 결과에서 잰다.
  *
- *   npm run dev &        # 5173 포트. harness.html 은 개발 서버에서만 열린다.
+ * 검사할 때마다 직접 빌드해서 그 결과를 띄운다. 개발 서버에 붙이면 tailwind 설정을
+ * 고친 뒤 재시작하지 않았을 때 옛 CSS 를 재서, 멀쩡한 화면이 실패하거나 깨진 화면이
+ * 통과한다. 실제로 한 번 그렇게 속았다.
+ *
  *   npm run check:layout
  */
+import { fileURLToPath, URL } from 'node:url'
+import { build, preview } from 'vite'
 import { chromium } from 'playwright'
 
-const BASE = process.env.BASE_URL ?? 'http://localhost:5173/'
 const SHOT_DIR = process.env.SHOT_DIR ?? null
+const PORT = 4199
+const OUT_DIR = 'dist-harness'
+const root = fileURLToPath(new URL('..', import.meta.url))
 
-/** 실제로 아이가 쓸 법한 기기들. 위쪽이 가장 좁고 낮다. */
+/**
+ * 검사할 기기 크기.
+ *
+ * 위에서 아래로 좁은 것부터 넓은 것 순이다. 맨 위 둘이 진짜 시험대다.
+ * 아이가 어떤 기기를 쓸지 모르니 폴더블 커버 화면부터 12.9인치 태블릿까지 본다.
+ */
 const DEVICES = [
+  { name: '폴더블 커버 280x653', width: 280, height: 653 },
+  { name: '아주 작은 폰 320x568', width: 320, height: 568 },
   { name: '작은 안드로이드 360x640', width: 360, height: 640 },
   { name: '아이폰 SE 375x667', width: 375, height: 667 },
   { name: '아이폰 14 390x844', width: 390, height: 844 },
+  { name: '픽셀 412x915', width: 412, height: 915 },
   { name: '큰 폰 430x932', width: 430, height: 932 },
-  { name: '태블릿 820x1180', width: 820, height: 1180 },
+  { name: '아이패드 미니 768x1024', width: 768, height: 1024 },
+  { name: '아이패드 에어 820x1180', width: 820, height: 1180 },
+  { name: '아이패드 프로 1024x1366', width: 1024, height: 1366 },
 ]
 
 /** 검사할 화면들. harness.html?screen= 값과 같다. */
@@ -54,7 +71,7 @@ const SCREENS = [
   { name: '부품 획득 연출', screen: 'reward' },
 ]
 
-function measure() {
+function measure(minKeyHeight) {
   const doc = document.documentElement
   const overflowingY = doc.scrollHeight > window.innerHeight + 1
   const overflowingX = doc.scrollWidth > window.innerWidth + 1
@@ -71,22 +88,23 @@ function measure() {
   const numberKeys = buttons
     .filter((b) => /^[0-9]$/.test(b.textContent?.trim() ?? ''))
     .map((b) => b.getBoundingClientRect())
-  const keyTooSmall = numberKeys.filter((r) => r.height < 64).length
+  const keyTooSmall = numberKeys.filter((r) => r.height < minKeyHeight).length
 
   const tinyText = [...document.querySelectorAll('p, span, button')]
     .filter((el) => (el.textContent ?? '').trim().length > 0)
     .filter((el) => el.getBoundingClientRect().height > 0)
-    // 자릿값 표의 자리 이름처럼 곁들이는 글자는 뺀다
-    .filter((el) => !el.hasAttribute('data-aside'))
     .map((el) => ({
       text: (el.textContent ?? '').trim().slice(0, 16),
       size: Number.parseFloat(getComputedStyle(el).fontSize),
     }))
     .filter(({ size }) => size < 14)
 
+  // 장식은 일부러 화면 밖까지 퍼진다. overflow-hidden 이 잘라 주므로 스크롤은 생기지 않는다.
   const clipped = [...document.querySelectorAll('button, p, svg, h1')]
-    // 장식은 일부러 화면 밖까지 퍼진다. overflow-hidden 이 잘라 주므로 스크롤은 생기지 않는다.
-    .filter((el) => el.closest('[aria-hidden="true"]') === null && el.getAttribute('aria-hidden') !== 'true')
+    .filter(
+      (el) =>
+        el.closest('[aria-hidden="true"]') === null && el.getAttribute('aria-hidden') !== 'true',
+    )
     .map((el) => ({ el, r: el.getBoundingClientRect() }))
     .filter(
       ({ r }) =>
@@ -98,8 +116,49 @@ function measure() {
         `${el.tagName} "${(el.textContent ?? '').trim().slice(0, 12)}" bottom=${Math.round(r.bottom)}/${window.innerHeight}`,
     )
 
-  return { overflowingY, overflowingX, small, keyTooSmall, tinyText, clipped }
+  /*
+   * 제 안에서 스크롤하는 상자.
+   * 화면 전체는 안 넘치는데 상자 안에서 내용이 잘리면, 검사는 통과하면서
+   * 아이는 문제를 못 읽는다. 일부러 스크롤하게 둔 곳(data-scrollable)만 봐준다.
+   */
+  const innerClipped = [...document.querySelectorAll('*')]
+    .filter((el) => {
+      const style = getComputedStyle(el)
+      if (!/auto|scroll/.test(style.overflowY) && !/auto|scroll/.test(style.overflowX)) return false
+      if (el.closest('[data-scrollable]')) return false
+      return el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1
+    })
+    .map(
+      (el) =>
+        `${el.tagName} "${(el.textContent ?? '').trim().slice(0, 14)}" ${el.scrollHeight}>${el.clientHeight}`,
+    )
+
+  return { overflowingY, overflowingX, small, keyTooSmall, tinyText, clipped, innerClipped }
 }
+
+/** 검사용 빌드. harness.html 은 여기서만 들어가고 배포본에는 없다. */
+await build({
+  root,
+  logLevel: 'warn',
+  build: {
+    outDir: OUT_DIR,
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        index: fileURLToPath(new URL('../index.html', import.meta.url)),
+        harness: fileURLToPath(new URL('../harness.html', import.meta.url)),
+      },
+    },
+  },
+})
+
+const server = await preview({
+  root,
+  logLevel: 'warn',
+  build: { outDir: OUT_DIR },
+  preview: { port: PORT, strictPort: true },
+})
+const BASE = `http://localhost:${String(PORT)}/`
 
 let failed = 0
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
@@ -120,20 +179,27 @@ for (const device of DEVICES) {
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(120)
 
-    const report = await page.evaluate(measure)
+    // 세로가 아주 짧은 기기에서는 숫자키를 48px 까지 줄인다. (tailwind 의 short 화면)
+    const minKeyHeight = device.height <= 620 ? 48 : 64
+    const report = await page.evaluate(measure, minKeyHeight)
 
     const problems = []
     if (errors.length) problems.push(`화면에서 오류가 났다: ${errors.join(' / ')}`)
     if (report.overflowingY) problems.push('세로 스크롤 발생')
     if (report.overflowingX) problems.push('가로 스크롤 발생')
     if (report.small.length) problems.push(`48px 미만 터치 타깃: ${report.small.join(', ')}`)
-    if (report.keyTooSmall) problems.push(`64px 미만 숫자키 ${report.keyTooSmall}개`)
+    if (report.keyTooSmall) {
+      problems.push(`${minKeyHeight}px 미만 숫자키 ${report.keyTooSmall}개`)
+    }
     if (report.tinyText.length) {
       problems.push(
         `14px 미만 글자: ${report.tinyText.map((t) => `"${t.text}" ${t.size}px`).join(', ')}`,
       )
     }
     if (report.clipped.length) problems.push(`화면 밖으로 나감: ${report.clipped.join(' / ')}`)
+    if (report.innerClipped.length) {
+      problems.push(`상자 안에서 잘림: ${report.innerClipped.join(' / ')}`)
+    }
 
     if (problems.length) {
       failed += 1
@@ -151,5 +217,7 @@ for (const device of DEVICES) {
 }
 
 await browser.close()
+await server.close()
+
 console.log(failed === 0 ? '\n전부 통과' : `\n${failed}건 실패`)
 process.exit(failed === 0 ? 0 : 1)

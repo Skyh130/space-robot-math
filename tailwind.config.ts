@@ -14,6 +14,13 @@ export default {
          * pointer:coarse 조건이 없으면 노트북 브라우저에서도 계속 뜬다.
          */
         rotated: { raw: '(orientation: landscape) and (pointer: coarse)' },
+        /*
+         * 세로가 아주 짧은 기기. 아이폰 SE 1세대(568px) 같은 옛 폰이다.
+         * 여기서는 숫자패드 키를 64px 로 두면 문제 카드가 설 자리가 없다.
+         * 48px 아래로는 절대 내려가지 않되, 64px 은 양보한다.
+         * 키가 조금 작은 것보다 버튼이 화면 밖으로 나가는 것이 훨씬 나쁘다.
+         */
+        short: { raw: '(max-height: 620px)' },
       },
       colors: {
         deep: '#1B2A6B', // 우주 배경
@@ -54,6 +61,10 @@ export default {
       },
       maxWidth: {
         app: '480px', // 태블릿에서 중앙 정렬되는 최대 폭
+      },
+      maxHeight: {
+        // 가장 큰 폰(932px)보다 조금 크게. 폰은 그대로, 태블릿만 가운데로 모인다.
+        app: '960px',
       },
       keyframes: {
         // 세로셈에서 받아올림 1이 위로 올라오는 모습

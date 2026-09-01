@@ -6,7 +6,7 @@ type StarRatingProps = {
 
 /** 별 세 칸. 못 받은 별도 자리를 남겨 둬야 다시 도전할 마음이 생긴다. */
 export function StarRating({ count, size = 'small' }: StarRatingProps) {
-  const box = size === 'large' ? 'h-16 w-16' : 'h-6 w-6'
+  const box = size === 'large' ? 'h-16 w-16 short:h-12 short:w-12' : 'h-6 w-6'
 
   return (
     <div className="flex items-center justify-center gap-1.5" aria-label={`별 ${count}개`}>

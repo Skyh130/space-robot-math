@@ -58,7 +58,7 @@ export function ResultScreen({
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto p-6 short:gap-3 short:p-4">
       <StarRating count={stars} size="large" />
 
       <p className="font-title text-3xl text-energy">{headline(stars)}</p>
@@ -144,7 +144,7 @@ function ChallengeResult({
   const beatLastWeek = lastWeekBest > 0 && weekBest > lastWeekBest
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6">
+    <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 short:gap-2.5 short:p-4">
       {isRecord ? (
         <p className="animate-pop-in font-title text-3xl text-coral">신기록!</p>
       ) : (

@@ -30,7 +30,7 @@ export function OrderPicker({ items, onSubmit, disabled = false, ends }: OrderPi
   const undo = () => setPicked(picked.slice(0, -1))
 
   return (
-    <div className="flex w-full flex-col gap-3">
+    <div className="flex w-full flex-col gap-3 short:gap-2">
       {ends === undefined ? null : (
         <div className="flex items-center gap-2 px-1">
           <span className="text-sm font-bold text-paper/70">{ends[0]}</span>
@@ -42,7 +42,7 @@ export function OrderPicker({ items, onSubmit, disabled = false, ends }: OrderPi
 
       <PickedRow items={items} picked={picked} />
 
-      <div className="flex flex-wrap justify-center gap-2.5">
+      <div className="flex flex-wrap justify-center gap-2.5 short:gap-2">
         {items.map((item, index) =>
           picked.includes(index) ? null : (
             <button
@@ -53,6 +53,7 @@ export function OrderPicker({ items, onSubmit, disabled = false, ends }: OrderPi
               className="
                 min-h-key min-w-[88px] rounded-2xl border-3 border-outline bg-paper px-4
                 text-number font-bold text-outline shadow-hard transition-transform
+                short:min-h-touch short:min-w-[72px] short:px-3 short:text-number-tight
                 active:translate-y-1 active:shadow-none
               "
             >
@@ -62,7 +63,7 @@ export function OrderPicker({ items, onSubmit, disabled = false, ends }: OrderPi
         )}
       </div>
 
-      <div className="flex gap-2.5">
+      <div className="flex gap-2.5 short:gap-2">
         <button
           type="button"
           onClick={undo}
@@ -121,7 +122,7 @@ function PickedRow({
   picked: readonly number[]
 }) {
   return (
-    <div className="flex min-h-16 items-center justify-center gap-2 rounded-2xl border-3 border-outline bg-panel px-3 py-2">
+    <div className="flex min-h-16 items-center justify-center gap-2 rounded-2xl border-3 border-outline bg-panel px-3 py-2 short:min-h-[52px] short:py-1">
       {items.map((_, slot) => {
         const index = picked[slot]
         const value = index === undefined ? null : items[index]
@@ -130,6 +131,7 @@ function PickedRow({
             key={slot}
             className={`
               flex h-11 flex-1 items-center justify-center rounded-xl border-3 text-xl font-bold
+              short:h-9 short:text-base
               ${value === null ? 'border-dashed border-paper/40 text-transparent' : 'border-outline bg-paper text-outline'}
             `}
           >

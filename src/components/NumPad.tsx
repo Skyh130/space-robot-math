@@ -34,10 +34,10 @@ export function NumPad({
   const canSubmit = value.length > 0 && !disabled
 
   return (
-    <div className="flex w-full flex-col gap-3">
+    <div className="flex w-full flex-col gap-3 short:gap-1.5">
       <AnswerSlot value={value} />
 
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-3 gap-2.5 short:gap-1.5">
         {DIGITS.map((digit) => (
           <Key key={digit} onPress={() => press(digit)} disabled={disabled} tone="number">
             {digit}
@@ -66,7 +66,7 @@ function AnswerSlot({ value }: { value: string }) {
     <div
       className="
         flex h-16 w-full items-center justify-center rounded-2xl border-3
-        border-outline bg-paper px-4
+        border-outline bg-paper px-4 short:h-12
       "
       aria-live="polite"
       aria-label="내가 쓴 답"
@@ -110,6 +110,7 @@ function Key({
       className={`
         flex h-16 min-h-key items-center justify-center rounded-2xl border-3
         border-outline text-number font-bold shadow-hard transition-transform
+        short:h-12 short:min-h-touch short:text-number-tight
         active:translate-y-1 active:shadow-none
         disabled:translate-y-1 disabled:border-outline/40 disabled:bg-panel
         disabled:text-paper/40 disabled:shadow-none
