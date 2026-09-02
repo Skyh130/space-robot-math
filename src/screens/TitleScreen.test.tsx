@@ -24,4 +24,10 @@ describe('TitleScreen', () => {
     render(<TitleScreen onStart={vi.fn()} />)
     expect(screen.getAllByRole('button')).toHaveLength(1)
   })
+
+  it('만든이가 제목 화면에 있다', () => {
+    render(<TitleScreen onStart={vi.fn()} />)
+    expect(screen.getByText(/SkyHan/)).toBeInTheDocument()
+    expect(screen.getByText(/Kai/)).toBeInTheDocument()
+  })
 })
