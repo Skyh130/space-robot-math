@@ -27,7 +27,13 @@ describe('TitleScreen', () => {
 
   it('만든이가 제목 화면에 있다', () => {
     render(<TitleScreen onStart={vi.fn()} />)
-    expect(screen.getByText(/SkyHan/)).toBeInTheDocument()
+    expect(screen.getByText(/© 2026 SkyHan/)).toBeInTheDocument()
     expect(screen.getByText(/Kai/)).toBeInTheDocument()
+  })
+
+  it('메일 주소는 적지 않는다', () => {
+    // 공개 URL 이라 페이지 소스에 그대로 노출되고 스팸 수집 봇이 긁어 간다.
+    const { container } = render(<TitleScreen onStart={vi.fn()} />)
+    expect(container.textContent).not.toMatch(/@/)
   })
 })

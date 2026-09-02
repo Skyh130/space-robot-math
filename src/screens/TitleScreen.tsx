@@ -44,8 +44,8 @@ export function TitleScreen({ onStart }: TitleScreenProps) {
  * 적어 두나 마나다. (scripts/check-layout.mjs)
  * 좁은 화면에서는 두 줄로 접히는데, text-balance 를 걸어 두 줄 길이를 비슷하게
  * 맞춘다. 이게 없으면 마지막 한 단어만 떨어져 내려와 흘린 것처럼 보인다.
- * 이름과 메일은 가운뎃점으로 잇지 않고 줄을 나눈다. 280px 폭에서 접히면
- * 가운뎃점만 다음 줄 맨 앞에 남아 흘린 글자처럼 보였다.
+ * 메일 주소는 적지 않는다. 공개 URL 이라 페이지 소스에 그대로 노출되고
+ * 스팸 수집 봇이 긁어 간다. 저작권 표기 한 줄이면 만든이는 충분히 드러난다.
  */
 function Credits() {
   return (
@@ -56,8 +56,7 @@ function Credits() {
       "
     >
       <p className="text-mint">For Kai — who builds robots out of numbers.</p>
-      <p className="text-paper/70">Made by SkyHan</p>
-      <p className="text-paper/60">ai.teacher.sg@gmail.com</p>
+      <p className="text-paper/70">© 2026 SkyHan</p>
     </footer>
   )
 }
