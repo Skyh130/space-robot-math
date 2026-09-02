@@ -73,20 +73,17 @@ function WarningStripe() {
 
 /** 보스를 나타내는 그림. 오리지널이며 특정 IP 를 따르지 않는다. */
 function BossMark() {
+  const edge = { stroke: '#101838', strokeWidth: 5, strokeLinejoin: 'round' } as const
   return (
     <svg viewBox="0 0 120 100" className="w-48 animate-pop-in" role="img" aria-label="보스">
-      <ellipse cx={60} cy={86} rx={40} ry={7} fill="#101838" opacity={0.35} />
-      <path
-        d="M20 52c0-18 18-30 40-30s40 12 40 30v6H20z"
-        fill="#2C3E8F"
-        stroke="#101838"
-        strokeWidth={5}
-        strokeLinejoin="round"
-      />
-      <rect x={14} y={56} width={92} height={20} rx={9} fill="#FF6B5B" stroke="#101838" strokeWidth={5} />
-      <circle cx={40} cy={45} r={9} fill="#FFC93C" stroke="#101838" strokeWidth={4} />
-      <circle cx={80} cy={45} r={9} fill="#FFC93C" stroke="#101838" strokeWidth={4} />
-      <rect x={54} y={8} width={12} height={16} rx={4} fill="#4FD1C5" stroke="#101838" strokeWidth={4} />
+      <ellipse cx={60} cy={94} rx={40} ry={6} fill="#101838" opacity={0.35} />
+      <path d="M28 28 L28 58 L2 12 Z" fill="#FF6B5B" {...edge} />
+      <path d="M92 28 L92 58 L118 12 Z" fill="#FF6B5B" {...edge} />
+      <path d="M54 6 L66 6 L70 22 L50 22 Z" fill="#2C3E8F" {...edge} />
+      <path d="M38 80 L82 80 L76 92 L44 92 Z" fill="#2C3E8F" {...edge} />
+      <path d="M22 44 L34 20 L86 20 L98 44 L98 64 L86 80 L34 80 L22 64 Z" fill="#FF6B5B" {...edge} />
+      <path d="M28 46 L92 46 L84 62 L36 62 Z" fill="#FFC93C" {...edge} />
+      <path d="M60 47 L60 61" stroke="#101838" strokeWidth={2} opacity={0.4} />
     </svg>
   )
 }

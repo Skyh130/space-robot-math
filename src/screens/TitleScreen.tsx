@@ -27,18 +27,24 @@ export function TitleScreen({ onStart }: TitleScreenProps) {
   )
 }
 
-/** 오리지널 로봇 얼굴. 기존 로봇 IP 의 이름·디자인을 쓰지 않는다. (CLAUDE.md 절대 규칙 5) */
+/**
+ * 오리지널 메카닉의 헤드 유닛.
+ *
+ * 기존 로봇 IP 의 이름·디자인·형태를 쓰지 않는다. (CLAUDE.md 절대 규칙 5)
+ * 격납고에 서 있는 기체(RobotFigure)와 같은 조형이어야 같은 로봇으로 읽힌다.
+ */
 function RobotMark() {
+  const edge = { stroke: '#101838', strokeWidth: 4, strokeLinejoin: 'round' } as const
   return (
     <svg viewBox="0 0 120 120" className="w-40" role="img" aria-label="로봇 얼굴">
-      <rect x={22} y={12} width={76} height={16} rx={8} fill="#4FD1C5" stroke="#101838" strokeWidth={4} />
-      <rect x={56} y={4} width={8} height={12} fill="#101838" />
-      <rect x={16} y={30} width={88} height={72} rx={16} fill="#2C3E8F" stroke="#101838" strokeWidth={4} />
-      <circle cx={42} cy={58} r={11} fill="#FFC93C" stroke="#101838" strokeWidth={4} />
-      <circle cx={78} cy={58} r={11} fill="#FFC93C" stroke="#101838" strokeWidth={4} />
-      <rect x={40} y={80} width={40} height={12} rx={6} fill="#FF6B5B" stroke="#101838" strokeWidth={4} />
-      <rect x={4} y={48} width={12} height={28} rx={5} fill="#4FD1C5" stroke="#101838" strokeWidth={4} />
-      <rect x={104} y={48} width={12} height={28} rx={5} fill="#4FD1C5" stroke="#101838" strokeWidth={4} />
+      <path d="M44 96 L76 96 L73 114 L47 114 Z" fill="#2C3E8F" {...edge} />
+      <path d="M16 48 L28 44 L28 76 L16 72 Z" fill="#2C3E8F" {...edge} />
+      <path d="M104 48 L92 44 L92 76 L104 72 Z" fill="#2C3E8F" {...edge} />
+      <path d="M49 4 L71 4 L74 18 L46 18 Z" fill="#2C3E8F" {...edge} />
+      <path d="M28 40 L42 18 L78 18 L92 40 L92 76 L78 96 L42 96 L28 76 Z" fill="#FFF6E5" {...edge} />
+      <path d="M34 46 L86 46 L79 68 L41 68 Z" fill="#FFC93C" {...edge} />
+      <path d="M60 47 L60 67" stroke="#101838" strokeWidth={2} opacity={0.4} />
+      <circle cx={60} cy={9} r={5} fill="#4FD1C5" stroke="#101838" strokeWidth={3} />
     </svg>
   )
 }
