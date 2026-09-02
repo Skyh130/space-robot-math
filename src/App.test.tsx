@@ -92,16 +92,27 @@ function shownAnswer(): string {
   return node?.textContent?.trim() ?? ''
 }
 
-/** 첫 시도에 일부러 틀린 뒤 정답을 읽어 다시 푼다. 별 0개로 끝내기 위한 것이다. */
+/**
+ * 일부러 틀린 뒤 정답을 읽어 다시 푼다. 별 0개로 끝내기 위한 것이다.
+ *
+ * 답은 두 번째로 틀렸을 때 펴진다. 그래서 같은 보기를 두 번 눌러야
+ * 화면에서 답을 읽을 수 있다. 아이가 실제로 겪는 흐름과 같다.
+ */
 async function missThenFix(user: ReturnType<typeof userEvent.setup>) {
   const buttons = choiceButtons()
-  await user.click(buttons[0] as HTMLElement)
+  const picked = buttons[0] as HTMLElement
+  const pickedLabel = picked.textContent?.trim() ?? ''
+  await user.click(picked)
 
   if (screen.queryByText('잘했어!')) {
     // 첫 보기가 우연히 정답이었다. 이 문제는 맞은 것으로 넘어간다.
     await user.click(key('다음'))
     return true
   }
+
+  // 한 번 더 같은 답을 넣어야 답이 펴진다
+  await user.click(key('다시 하기'))
+  await user.click(key(pickedLabel))
 
   const answer = shownAnswer()
   await user.click(key('다시 하기'))

@@ -1,5 +1,5 @@
 import { placeConfused } from '../engine/distractors'
-import { josa, josaOf, readNumberKo } from '../engine/korean'
+import { josa, readNumberKo } from '../engine/korean'
 import { defineTemplate, type AnyQuestionTemplate, type DistractorRule } from '../engine/types'
 
 /**
@@ -85,7 +85,16 @@ export const w1Lv1ReadNumber: AnyQuestionTemplate = defineTemplate({
     return `${josa(readNumberKo(number), '을/를')} 숫자로 쓰면?`
   },
   answer: (p) => p.h * 100 + p.t * 10 + p.o,
-  hint: (p) => `백의 자리는 ${p.h}, 십의 자리는 ${p.t}, 일의 자리는 ${p.o}${josaOf(String(p.o), '이야/야')}.`,
+  /*
+   * 자릿수를 그대로 읊으면 그게 곧 답이다. 처음 틀렸을 때는 답 없이 힌트만
+   * 주기로 했으므로(components/Feedback.tsx), 여기서 답을 흘리면 안 된다.
+   * 읽지 않고 건너뛴 자리가 있는 수는 그것만 짚어 준다. 0을 빠뜨리는 것이
+   * 이 문제의 대표 실수다.
+   */
+  hint: (p) =>
+    p.t === 0 || p.o === 0
+      ? '읽지 않고 건너뛴 자리에는 0을 넣어야 해.'
+      : '읽은 차례대로 백·십·일 자리에 하나씩 놓아 봐.',
   hintVisual: (p) => ({ kind: 'placeValue', value: p.h * 100 + p.t * 10 + p.o }),
   distractors: [
     swapTensOnes,

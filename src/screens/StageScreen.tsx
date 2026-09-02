@@ -56,6 +56,14 @@ type StageScreenProps = {
 const TIMED_FEEDBACK_MS = 800
 
 /**
+ * 답을 펴기까지 허락하는 오답 횟수.
+ *
+ * 1이면 처음 틀렸을 때 힌트만 주고, 두 번째로 틀리면 답과 풀이를 편다.
+ * 0이면 옛날처럼 곧바로 답을 보여주는 것이고, 3 이상이면 8살이 갇힌다.
+ */
+const REVEAL_AFTER = 2
+
+/**
  * 스테이지 한 판.
  *
  * 점수는 첫 시도만 센다. 틀리면 정답과 힌트를 보여주고 다시 풀게 하는데,
@@ -76,6 +84,11 @@ export function StageScreen({
   const [typed, setTyped] = useState('')
   const [result, setResult] = useState<AnswerResult | null>(null)
   const [firstTry, setFirstTry] = useState(true)
+  /**
+   * 이 문제에서 몇 번 틀렸는지. 문제가 바뀌면 0으로 돌아간다.
+   * 한 번 틀리면 힌트만 주고, 두 번째로 틀리면 답과 풀이를 편다.
+   */
+  const [wrongCount, setWrongCount] = useState(0)
   const [log, setLog] = useState<StageOutcome['skillLog']>([])
   const [missed, setMissed] = useState<Question[]>([])
   const [remaining, setRemaining] = useState(timeLimitSeconds ?? 0)
@@ -147,12 +160,14 @@ export function StageScreen({
     setTyped('')
     setResult(null)
     setFirstTry(true)
+    setWrongCount(0)
     setShowCombo(false)
   }
 
   const submit = (given: AnswerValue) => {
     const outcome = checkAnswer(question, given)
     setResult(outcome)
+    if (!outcome.correct) setWrongCount(wrongCount + 1)
 
     let entries = log
     let missedNow = missed
@@ -233,7 +248,10 @@ export function StageScreen({
       ) : (
         <Feedback
           result={result}
-          {...(result.correct || question.hintVisual === undefined
+          showAnswer={wrongCount >= REVEAL_AFTER}
+          {...(result.correct ||
+          wrongCount < REVEAL_AFTER ||
+          question.hintVisual === undefined
             ? {}
             : { visual: <HintVisualView visual={question.hintVisual} /> })}
           {...(showCombo ? { streak } : {})}

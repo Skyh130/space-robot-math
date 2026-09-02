@@ -55,6 +55,7 @@ const SCREENS = [
   { name: 'Lv4 부등호', screen: '4' },
   { name: 'Lv5 숫자 카드', screen: '5' },
   { name: '보스 순서 배열', screen: 'boss' },
+  { name: '오답 피드백(처음 — 힌트만)', screen: 'feedback-first' },
   { name: '오답 피드백(그림 힌트)', screen: 'feedback' },
   { name: '콤보 배지 + 그림 힌트', screen: 'combo' },
   { name: 'W2 Lv1 덧셈', screen: 'w2-1' },

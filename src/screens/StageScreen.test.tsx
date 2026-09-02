@@ -76,7 +76,7 @@ describe('StageScreen — 스테이지 진행', () => {
     const first = questions[0] as Question
     const wrong = (first.choices ?? []).find((c) => String(c) !== String(first.answer))
     await user.click(key(String(wrong)))
-    expect(screen.getByText('아까워! 다시 볼까?')).toBeInTheDocument()
+    expect(screen.getByText('아까워! 다시 해 볼까?')).toBeInTheDocument()
 
     await user.click(key('다시 하기'))
     await solve(user, first)
@@ -91,18 +91,57 @@ describe('StageScreen — 스테이지 진행', () => {
     expect(outcome.missed[0]?.id).toBe(first.id)
   })
 
-  it('오답이면 그림 힌트가 함께 나온다', async () => {
+  it('처음 틀리면 답을 알려주지 않고 힌트만 준다', async () => {
     const user = userEvent.setup()
     const questions = makeStage(1)
-    render(<StageScreen questions={questions} label="x" onFinish={vi.fn()} />)
+    const { container } = render(
+      <StageScreen questions={questions} label="x" onFinish={vi.fn()} />,
+    )
 
     const first = questions[0] as Question
     const wrong = (first.choices ?? []).find((c) => String(c) !== String(first.answer))
     await user.click(key(String(wrong)))
 
     expect(screen.getByText(first.hint)).toBeInTheDocument()
+    expect(container.textContent).not.toContain('답은')
+    // 자릿값 표(풀이)도 아직 펴지 않는다
+    expect(screen.queryByText('백')).not.toBeInTheDocument()
+  })
+
+  it('두 번째로 틀리면 답과 그림 힌트를 편다', async () => {
+    const user = userEvent.setup()
+    const questions = makeStage(1)
+    const { container } = render(
+      <StageScreen questions={questions} label="x" onFinish={vi.fn()} />,
+    )
+
+    const first = questions[0] as Question
+    const wrong = (first.choices ?? []).find((c) => String(c) !== String(first.answer))
+    await user.click(key(String(wrong)))
+    await user.click(key('다시 하기'))
+    await user.click(key(String(wrong)))
+
+    expect(container.textContent).toContain(`답은 ${String(first.answer)}`)
     // 자릿값 표가 뜬다
     expect(screen.getByText('백')).toBeInTheDocument()
+  })
+
+  it('답을 편 뒤에도 스스로 정답을 넣어야 넘어간다', async () => {
+    const user = userEvent.setup()
+    const questions = makeStage(1)
+    const onFinish = vi.fn()
+    render(<StageScreen questions={questions} label="x" onFinish={onFinish} />)
+
+    const first = questions[0] as Question
+    const wrong = (first.choices ?? []).find((c) => String(c) !== String(first.answer))
+    for (let i = 0; i < 2; i += 1) {
+      await user.click(key(String(wrong)))
+      await user.click(key('다시 하기'))
+    }
+
+    expect(screen.queryByRole('button', { name: '다음' })).not.toBeInTheDocument()
+    await solve(user, first)
+    expect(key('다음')).toBeInTheDocument()
   })
 
   it('영역별 정답 기록을 남긴다', async () => {

@@ -214,6 +214,7 @@ function View() {
         <QuestionCard prompt={question.prompt} />
         <Feedback
           result={checkAnswer(question, 0)}
+          showAnswer
           {...(question.hintVisual === undefined
             ? {}
             : { visual: <HintVisualView visual={question.hintVisual} /> })}
@@ -232,6 +233,7 @@ function View() {
         <QuestionCard prompt={question.prompt} />
         <Feedback
           result={checkAnswer(question, 0)}
+          showAnswer
           {...(question.hintVisual === undefined
             ? {}
             : { visual: <HintVisualView visual={question.hintVisual} /> })}
@@ -252,10 +254,29 @@ function View() {
         <QuestionCard prompt={question.prompt} />
         <Feedback
           result={checkAnswer(question, wrong ?? 0)}
+          showAnswer
           streak={8}
           {...(question.hintVisual === undefined
             ? {}
             : { visual: <HintVisualView visual={question.hintVisual} /> })}
+          onRetry={() => undefined}
+          onNext={() => undefined}
+        />
+      </div>
+    )
+  }
+
+  if (screen === 'feedback-first') {
+    // 처음 틀렸을 때. 답도 풀이도 없이 힌트 한 줄만 있는 상태다.
+    const question = stageAt(2)[0]
+    if (!question) return null
+    const wrong = (question.choices ?? []).find((c) => String(c) !== String(question.answer))
+    return (
+      <div className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
+        <QuestionCard prompt={question.prompt} />
+        <Feedback
+          result={checkAnswer(question, wrong ?? 0)}
+          showAnswer={false}
           onRetry={() => undefined}
           onNext={() => undefined}
         />
@@ -273,6 +294,7 @@ function View() {
         <QuestionCard prompt={question.prompt} />
         <Feedback
           result={checkAnswer(question, wrong ?? 0)}
+          showAnswer
           {...(question.hintVisual === undefined
             ? {}
             : { visual: <HintVisualView visual={question.hintVisual} /> })}
