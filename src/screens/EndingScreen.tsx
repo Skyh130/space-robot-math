@@ -126,31 +126,36 @@ function Stat({ label, value }: { label: string; value: string }) {
  *
  * 부품 획득 화면의 빛살보다 넓게 깔되 로봇 위를 가로지르지 않는다.
  * 별은 고정된 자리에 그린다. 볼 때마다 자리가 바뀌면 무늬가 아니라 잡음이 된다.
+ * [가로 %, 세로 %, 지름 px]
  */
 const STARS: readonly (readonly [number, number, number])[] = [
-  [12, 14, 3], [30, 6, 2], [52, 12, 2.5], [74, 8, 2], [90, 18, 3],
-  [8, 40, 2], [94, 44, 2.5], [16, 68, 2.5], [88, 72, 2],
-  [6, 88, 3], [34, 94, 2], [62, 92, 2.5], [92, 88, 2],
+  [12, 14, 7], [30, 6, 5], [52, 12, 6], [74, 8, 5], [90, 18, 7],
+  [8, 40, 5], [94, 44, 6], [16, 68, 6], [88, 72, 5],
+  [6, 88, 7], [34, 94, 5], [62, 92, 6], [92, 88, 5],
 ]
 
 function Starfield() {
   return (
     <div className="pointer-events-none absolute inset-0" aria-hidden="true">
       <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 animate-shine rounded-full bg-energy/20 blur-3xl" />
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
-        {STARS.map(([x, y, r], index) => (
-          <circle
-            key={index}
-            cx={x}
-            cy={y}
-            r={r / 4}
-            fill="#FFC93C"
-            opacity={0.55}
-            className="animate-shine"
-            style={{ animationDelay: `${String(index * 0.12)}s` }}
-          />
-        ))}
-      </svg>
+      {/*
+        별은 div 로 놓는다. SVG 를 preserveAspectRatio="none" 으로 늘리면
+        동그란 별이 세로로 긴 타원이 된다. 세로로 긴 화면에서 특히 심하다.
+      */}
+      {STARS.map(([x, y, size], index) => (
+        <span
+          key={index}
+          className="absolute animate-shine rounded-full bg-energy"
+          style={{
+            left: `${String(x)}%`,
+            top: `${String(y)}%`,
+            width: `${String(size)}px`,
+            height: `${String(size)}px`,
+            opacity: 0.55,
+            animationDelay: `${String(index * 0.12)}s`,
+          }}
+        />
+      ))}
     </div>
   )
 }
