@@ -109,6 +109,7 @@ function build(
     skill: template.skill,
     inputType: template.inputType,
     prompt: template.render(params),
+    ...(template.figure === undefined ? {} : { figure: template.figure(params) }),
     params,
     answer,
     hint: template.hint(params),

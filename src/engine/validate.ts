@@ -1,6 +1,6 @@
 import { composeQuestion } from './generator'
 import { createRng } from './rng'
-import type { AnyQuestionTemplate, ParamRange, Question } from './types'
+import type { AnyQuestionTemplate, HintVisual, ParamRange, Question } from './types'
 
 /**
  * 템플릿 검사기.
@@ -120,13 +120,105 @@ function inspect(question: Question, maxAnswer: number): string[] {
     problems.push(problem)
   }
 
+  for (const problem of inspectFigure(question)) {
+    problems.push(problem)
+  }
+
   return problems
+}
+
+/**
+ * 문제에 붙는 그림을 살핀다.
+ *
+ * 힌트 그림과 달리 이 그림은 문제 그 자체다. 시계가 13시를 가리키거나 막대의
+ * 색칠 칸이 전체 칸보다 많으면, 아이는 풀 수 없는 문제 앞에 앉게 된다.
+ */
+function inspectFigure(question: Question): string[] {
+  const figure = question.figure
+  if (figure === undefined) return []
+
+  switch (figure.kind) {
+    case 'clock': {
+      const { hour, minute } = figure
+      if (!Number.isInteger(hour) || hour < 1 || hour > 12) {
+        return [`시계의 시가 1~12 밖이다: ${String(hour)}`]
+      }
+      if (!Number.isInteger(minute) || minute < 0 || minute > 59) {
+        return [`시계의 분이 0~59 밖이다: ${String(minute)}`]
+      }
+      return []
+    }
+    case 'shape':
+      return []
+    case 'ruler': {
+      const { lengthMm } = figure
+      // 자는 10cm 짜리다. 그보다 긴 막대는 자 밖으로 나간다.
+      if (!Number.isInteger(lengthMm) || lengthMm <= 0 || lengthMm > 100) {
+        return [`자 위 막대의 길이가 이상하다: ${String(lengthMm)}mm`]
+      }
+      return []
+    }
+    case 'fractionBars': {
+      if (figure.bars.length === 0) return ['막대 그림이 비어 있다.']
+      const problems: string[] = []
+      for (const bar of figure.bars) {
+        if (!Number.isInteger(bar.parts) || bar.parts < 1 || bar.parts > 12) {
+          problems.push(`막대 칸 수가 이상하다: ${String(bar.parts)}`)
+        }
+        if (!Number.isInteger(bar.filled) || bar.filled < 0 || bar.filled > bar.parts) {
+          problems.push(`색칠 칸이 전체 칸을 넘는다: ${String(bar.filled)}/${String(bar.parts)}`)
+        }
+      }
+      return problems
+    }
+    case 'barChart': {
+      if (figure.bars.length === 0) return ['막대그래프가 비어 있다.']
+      return figure.bars.every((bar) => Number.isInteger(bar.value) && bar.value >= 0)
+        ? []
+        : ['막대그래프의 값이 이상하다.']
+    }
+    case 'dataTable': {
+      const problems: string[] = []
+      if (figure.headers.length === 0) return ['표에 머리글이 없다.']
+      if (figure.rows.length === 0) problems.push('표에 줄이 없다.')
+      for (const row of figure.rows) {
+        if (row.length !== figure.headers.length) {
+          problems.push(`표의 칸 수가 머리글과 다르다: ${String(row.length)} vs ${String(figure.headers.length)}`)
+        }
+        for (const cell of row) {
+          if (cell.includes('undefined') || cell.includes('NaN')) {
+            problems.push(`표 칸이 깨졌다: ${cell}`)
+          }
+        }
+      }
+      if (figure.highlight) {
+        const [r, c] = figure.highlight
+        if (figure.rows[r]?.[c] === undefined) {
+          problems.push(`표에서 짚을 칸이 없다: [${String(r)}, ${String(c)}]`)
+        }
+      }
+      return problems
+    }
+    case 'shapePattern': {
+      const { items, blankAt } = figure
+      if (items.length < 4) return ['규칙을 보여주기에는 도형이 모자란다.']
+      if (!Number.isInteger(blankAt) || blankAt < 0 || blankAt >= items.length) {
+        return [`빈칸 자리가 줄 밖이다: ${String(blankAt)}`]
+      }
+      return []
+    }
+    default:
+      // 힌트 그림과 같은 종류를 문제에 그대로 쓴 것이다. 같은 잣대로 본다.
+      return checkHintVisual(figure)
+  }
 }
 
 function inspectHintVisual(question: Question): string[] {
   const visual = question.hintVisual
-  if (visual === undefined) return []
+  return visual === undefined ? [] : checkHintVisual(visual)
+}
 
+function checkHintVisual(visual: HintVisual): string[] {
   switch (visual.kind) {
     case 'placeValue':
       return Number.isInteger(visual.value) && visual.value >= 0

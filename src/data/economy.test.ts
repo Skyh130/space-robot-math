@@ -26,9 +26,9 @@ describe('코인 벌이', () => {
     expect(coinsForWorld(3)).toBe(coinsForWorld(1) + 4 * COINS_PER_CORRECT)
   })
 
-  it('MVP 한 바퀴를 다 맞히면 740코인', () => {
-    // 월드 1~3 의 스테이지 18개, 문제 148개. W3 보스만 12문제라 4개가 더 있다.
-    expect(coinsForFullRun()).toBe(740)
+  it('여덟 월드를 다 맞히면 1940코인', () => {
+    // 스테이지 48개, 문제 388개. W3 보스만 12문제라 4개가 더 있다.
+    expect(coinsForFullRun()).toBe(1940)
   })
 })
 
@@ -37,8 +37,8 @@ describe('상점 값', () => {
     expect(PRICES.color).toBeGreaterThan(PRICES.decal)
   })
 
-  it('상점을 통째로 사려면 1700코인', () => {
-    expect(shopTotal()).toBe(1700)
+  it('상점을 통째로 사려면 3600코인', () => {
+    expect(shopTotal()).toBe(3600)
   })
 })
 
@@ -68,5 +68,11 @@ describe('벌이와 가격의 눈금', () => {
     const total = PLANNED_ITEMS.color + PLANNED_ITEMS.decal
     expect(total).toBeGreaterThan(6)
     expect(total).toBeLessThanOrEqual(16)
+  })
+
+  it('한 바퀴로 상점의 절반쯤을 산다', () => {
+    const share = coinsForFullRun() / shopTotal()
+    expect(share).toBeGreaterThan(0.4)
+    expect(share).toBeLessThan(0.7)
   })
 })

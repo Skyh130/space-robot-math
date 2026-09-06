@@ -66,6 +66,27 @@ const SCREENS = [
   { name: 'W3 Lv5 식 세우기', screen: 'w3-5' },
   { name: 'W3 보스(타이머)', screen: 'w3-boss' },
   { name: 'W3 오답(묶음 힌트)', screen: 'w3feedback' },
+  { name: 'W4 Lv1 시계 읽기', screen: 'w4-1' },
+  { name: 'W4 Lv3 눈금과 분', screen: 'w4-3' },
+  { name: 'W4 Lv5 시각표', screen: 'w4-5' },
+  { name: 'W4 보스(시각표)', screen: 'w4-boss' },
+  { name: 'W5 Lv1 도형 이름', screen: 'w5-1' },
+  { name: 'W5 Lv3 자로 재기', screen: 'w5-3' },
+  { name: 'W5 Lv5 둘레', screen: 'w5-5' },
+  { name: 'W6 Lv1 똑같이 나누기', screen: 'w6-1' },
+  { name: 'W6 Lv4 나머지', screen: 'w6-4' },
+  { name: 'W6 보스(나머지 처리)', screen: 'w6-boss' },
+  { name: 'W7 Lv1 분수 읽기', screen: 'w7-1' },
+  { name: 'W7 Lv3 분수 비교', screen: 'w7-3' },
+  { name: 'W7 Lv4 소수(소수점 키)', screen: 'w7-4' },
+  { name: 'W7 Lv5 소수 더하기', screen: 'w7-5' },
+  { name: 'W7 보스(탱크 셋)', screen: 'w7-boss' },
+  { name: 'W8 Lv1 표 읽기', screen: 'w8-1' },
+  { name: 'W8 Lv2 막대그래프', screen: 'w8-2' },
+  { name: 'W8 Lv3 도형 규칙', screen: 'w8-3' },
+  { name: 'W8 Lv4 표 채우기', screen: 'w8-4' },
+  { name: 'W8 최종 보스', screen: 'w8-boss' },
+  { name: '엔딩(합체)', screen: 'ending' },
   { name: '결과 화면', screen: 'result' },
   { name: '격납고(3개)', screen: 'hangar' },
   { name: '격납고(8개 완성)', screen: 'hangar-full' },
@@ -74,6 +95,9 @@ const SCREENS = [
 
 function measure(minKeyHeight) {
   const doc = document.documentElement
+  // 그림이 붙은 문제는 시계·표가 자리를 먹으므로 키를 56px 까지 줄여 준다.
+  // 48px 아래로는 어디서도 내려가지 않는다.
+  if (document.querySelector('[data-figure]')) minKeyHeight = Math.min(minKeyHeight, 56)
   const overflowingY = doc.scrollHeight > window.innerHeight + 1
   const overflowingX = doc.scrollWidth > window.innerWidth + 1
 

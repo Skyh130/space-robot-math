@@ -3,11 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import App from './App'
-import { STAGE_ORDER, templatesFor, worldById } from './data/worlds'
+import { STAGE_ORDER, templatesFor, WORLDS, worldById } from './data/worlds'
 import { buildStage, stageSeed, type Question, type StageLevel } from './engine'
 import {
   COINS_PER_CORRECT,
   defaultSave,
+  isWorldUnlocked,
   loadSave,
   recordStage,
   starsOf,
@@ -47,6 +48,16 @@ function questionsFor(level: StageLevel, attempt = 0): Question[] {
   return buildStage(templatesFor(WORLD, level), stageSeed(WORLD.id, level, attempt))
 }
 
+/** 일부러 틀릴 때 넣을 값. 소수는 소수점 자리를 지키고, 정수는 하나를 더한다. */
+function wrongOf(question: Question): string {
+  const answer = String(question.answer)
+  if (answer.includes('.')) {
+    const shifted = (Number(answer) + 0.1).toFixed(1)
+    return Number(shifted) > 9.9 ? '0.1' : shifted
+  }
+  return String(Number(answer) + 1)
+}
+
 async function solve(user: ReturnType<typeof userEvent.setup>, question: Question, correct = true) {
   if (question.inputType === 'choice') {
     const choices = question.choices ?? []
@@ -60,8 +71,11 @@ async function solve(user: ReturnType<typeof userEvent.setup>, question: Questio
     for (const value of order) await user.click(key(String(value)))
     await user.click(key('확인'))
   } else {
-    const value = correct ? String(question.answer) : String((question.answer as number) + 1)
-    for (const digit of value) await user.click(key(digit))
+    const value = correct ? String(question.answer) : wrongOf(question)
+    for (const character of value) {
+      // 소수 문제의 '.' 은 숫자키가 아니라 소수점 키다
+      await user.click(character === '.' ? key('소수점') : key(character))
+    }
     await user.click(key('확인'))
   }
 
@@ -244,13 +258,98 @@ describe('월드맵 잠금', () => {
     expect(key(/^중력 협곡/)).toBeDisabled()
   })
 
-  it('아직 문제를 만들지 않은 월드는 준비 중으로 보인다', async () => {
+  it('여덟 행성이 모두 열려 있다. 준비 중은 없다', async () => {
     const user = userEvent.setup()
     render(<App storage={store} />)
 
     await user.click(key('출발!'))
-    // 월드 4~8 은 아직 템플릿이 없다
-    expect(screen.getAllByText('준비 중')).toHaveLength(5)
+    expect(screen.queryAllByText('준비 중')).toHaveLength(0)
+    // 마지막 행성까지 자리가 있어야 아이가 끝을 본다
+    expect(key(/^적 모선/)).toBeInTheDocument()
+  })
+})
+
+describe('마지막 행성과 엔딩', () => {
+  /** 앞 일곱 행성을 다 깨고 W8 의 다섯 단계까지 끝낸 저장. 보스만 남는다. */
+  function readyForLastBoss() {
+    let save = defaultSave()
+    for (const world of WORLDS) {
+      for (const level of [1, 2, 3, 4, 5] as const) {
+        save = recordStage(save, { world: world.id, level, stars: 3, correct: 8, skillLog: [] })
+      }
+      if (world.id === 8) continue
+      save = recordStage(save, {
+        world: world.id,
+        level: 'boss',
+        stars: 3,
+        correct: 8,
+        skillLog: [],
+        part: world.part,
+      })
+    }
+    return save
+  }
+
+  it('마지막 보스를 깨면 부품 여덟 개가 모여 엔딩이 나온다', async () => {
+    const user = userEvent.setup()
+    const save = readyForLastBoss()
+    expect(save.parts).toHaveLength(7)
+    writeSave(save, store)
+    render(<App storage={store} />)
+
+    await user.click(key('출발!'))
+    await user.click(key(/^적 모선/))
+    await user.click(key(/^보스/))
+    await dismissBossIntro(user)
+
+    const last = worldById(8)
+    const questions = buildStage(
+      templatesFor(last, 'boss'),
+      stageSeed(8, 'boss', 0),
+    )
+    for (const question of questions) await solve(user, question)
+
+    // 결과 → 부품 획득 → 엔딩
+    await user.click(key('부품 받기'))
+
+    /*
+      두 화면 모두 버튼을 DOM 에 두고 class 로만 감춘다. 그냥 찾아 누르면
+      연출이 끝나기 전에 눌러 버리므로, 아이가 실제로 누를 수 있는 때를 기다린다.
+    */
+    await waitFor(
+      () => {
+        expect(key('격납고로').className).not.toContain('invisible')
+      },
+      { timeout: 6000 },
+    )
+    await user.click(key('격납고로'))
+
+    // 엔딩에서 여덟 부품이 다 붙은 로봇이 선다
+    await waitFor(
+      () => {
+        expect(screen.getByRole('img', { name: /부품 8개/ })).toBeInTheDocument()
+      },
+      { timeout: 6000 },
+    )
+    expect(screen.getByText('합체 완료!')).toBeInTheDocument()
+    expect(screen.getByText('모든 행성 탐사 완료')).toBeInTheDocument()
+  }, 40000)
+
+  it('여덟 행성이 차례로 열린다. 앞을 깨야 다음이 열린다', () => {
+    let save = defaultSave()
+    expect(isWorldUnlocked(save, 1)).toBe(true)
+    for (const world of WORLDS) {
+      expect(isWorldUnlocked(save, world.id), `W${String(world.id)}`).toBe(true)
+      save = recordStage(save, {
+        world: world.id,
+        level: 'boss',
+        stars: 3,
+        correct: 8,
+        skillLog: [],
+        part: world.part,
+      })
+    }
+    expect(save.parts).toHaveLength(8)
   })
 })
 

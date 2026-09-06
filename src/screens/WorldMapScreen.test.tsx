@@ -30,12 +30,12 @@ describe('WorldMapScreen — 행성 목록', () => {
     expect(screen.getByText('5')).toBeInTheDocument()
   })
 
-  it('아직 문제가 없는 행성은 준비 중이고 누를 수 없다', () => {
+  it('준비 중인 행성이 하나도 없다', () => {
+    // 여덟 행성이 다 열려 있어야 아이가 끝까지 간다
     render(
       <WorldMapScreen save={defaultSave()} openWorld={null} onOpenWorld={noop} onPlay={noop} />,
     )
-    expect(screen.getAllByText('준비 중')).toHaveLength(5)
-    expect(screen.getByRole('button', { name: /관제 스테이션/ })).toBeDisabled()
+    expect(screen.queryAllByText('준비 중')).toHaveLength(0)
   })
 
   it('갈 수 있는 행성을 누르면 펼친다', async () => {

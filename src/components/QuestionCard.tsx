@@ -1,5 +1,14 @@
+import type { QuestionFigure } from '../engine'
+
+import { isScalableFigure, QuestionFigureView } from './QuestionFigure'
+
 type QuestionCardProps = {
   prompt: string
+  /**
+   * 문장과 함께 보여줄 그림. 시계를 안 보여주고 "몇 시야?" 를 물을 수는 없다.
+   * 그림이 곧 문제인 W4·W5·W7·W8 에서 쓴다.
+   */
+  figure?: QuestionFigure
 }
 
 /**
@@ -32,8 +41,15 @@ function sizeOf(line: string): string {
   return 'text-question short:text-[1.25rem]'
 }
 
-export function QuestionCard({ prompt }: QuestionCardProps) {
+export function QuestionCard({ prompt, figure }: QuestionCardProps) {
   const lines = prompt.split('\n')
+  /*
+    글만 있는 카드는 일부러 줄어들지 않게 둔다. 자리가 모자라면 화면이 넘쳐서
+    검사에 걸리는 편이 낫다. 글자를 줄이면 아이가 문제를 못 읽기 때문이다.
+    그림이 있는 카드는 다르다. SVG 는 작아져도 잘리지 않고 비율만 지키며 줄어드니,
+    남는 자리에 맞춰 그림이 양보하게 한다.
+  */
+  const scalable = figure !== undefined && isScalableFigure(figure)
 
   return (
     <div
@@ -43,12 +59,30 @@ export function QuestionCard({ prompt }: QuestionCardProps) {
         그러면 화면 검사는 통과하면서 아이는 문제를 못 읽는다.
         자리가 모자라면 차라리 화면이 넘쳐서 검사에 걸리는 편이 낫다.
       */
-      className="
+      className={`
         flex w-full flex-1 flex-col items-center justify-center gap-1.5
         rounded-3xl border-3 border-outline bg-paper px-5 py-4 shadow-hard
         short:gap-1 short:px-3 short:py-2
-      "
+        ${scalable ? 'min-h-0' : ''}
+      `}
     >
+      {figure === undefined ? null : (
+        /*
+          data-figure 는 화면 검사기가 "이 화면에는 그림이 있다" 를 알아보는 표시다.
+          그림이 있는 판은 숫자패드 키를 56px 까지 줄여도 되게 해 둔다.
+        */
+        <div
+          data-figure
+          className={
+            scalable
+              ? 'flex min-h-0 w-full flex-1 items-center justify-center py-1'
+              : 'flex w-full shrink-0 items-center justify-center py-1'
+          }
+        >
+          <QuestionFigureView figure={figure} />
+        </div>
+      )}
+
       {lines.map((line, index) => (
         <p
           key={index}

@@ -9,6 +9,7 @@ import { Feedback } from './components/Feedback'
 import { QuestionCard } from './components/QuestionCard'
 import { ResultScreen } from './screens/ResultScreen'
 import { BossIntroScreen } from './screens/BossIntroScreen'
+import { EndingScreen } from './screens/EndingScreen'
 import { HangarScreen } from './screens/HangarScreen'
 import { PartRewardScreen } from './screens/PartRewardScreen'
 import { WorldMapScreen } from './screens/WorldMapScreen'
@@ -263,6 +264,54 @@ function View() {
           onNext={() => undefined}
         />
       </div>
+    )
+  }
+
+  if (screen === 'ending') {
+    return (
+      <EndingScreen
+        save={{ ...clearedSave(), parts: WORLDS.map((world) => world.part) }}
+        onHangar={() => undefined}
+      />
+    )
+  }
+
+  // 월드 4~8 의 새 화면들. 그림이 붙는 문제는 여기서 키가 가장 크다.
+  const FIGURE_SCREENS: Readonly<Record<string, { world: WorldId; level: StageLevel }>> = {
+    'w4-1': { world: 4, level: 1 },
+    'w4-3': { world: 4, level: 3 },
+    'w4-5': { world: 4, level: 5 },
+    'w4-boss': { world: 4, level: 'boss' },
+    'w5-1': { world: 5, level: 1 },
+    'w5-3': { world: 5, level: 3 },
+    'w5-5': { world: 5, level: 5 },
+    'w6-1': { world: 6, level: 1 },
+    'w6-4': { world: 6, level: 4 },
+    'w6-boss': { world: 6, level: 'boss' },
+    'w7-1': { world: 7, level: 1 },
+    'w7-3': { world: 7, level: 3 },
+    'w7-4': { world: 7, level: 4 },
+    'w7-5': { world: 7, level: 5 },
+    'w7-boss': { world: 7, level: 'boss' },
+    'w8-1': { world: 8, level: 1 },
+    'w8-2': { world: 8, level: 2 },
+    'w8-3': { world: 8, level: 3 },
+    'w8-4': { world: 8, level: 4 },
+    'w8-boss': { world: 8, level: 'boss' },
+  }
+
+  const figureScreen = FIGURE_SCREENS[screen]
+  if (figureScreen) {
+    const meta = worldById(figureScreen.world)
+    const rule = stageRuleFor(figureScreen.world, figureScreen.level)
+    return (
+      <StageScreen
+        questions={stageAt(figureScreen.level, figureScreen.world)}
+        label={`${meta.name} · ${figureScreen.level === 'boss' ? '보스' : `${String(figureScreen.level)}단계`}`}
+        onFinish={() => undefined}
+        onQuit={() => undefined}
+        {...(rule.timeLimitSeconds === undefined ? {} : { timeLimitSeconds: rule.timeLimitSeconds })}
+      />
     )
   }
 

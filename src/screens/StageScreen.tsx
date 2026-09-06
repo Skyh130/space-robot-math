@@ -237,7 +237,10 @@ export function StageScreen({
         )}
       </header>
 
-      <QuestionCard prompt={question.prompt} />
+      <QuestionCard
+        prompt={question.prompt}
+        {...(question.figure === undefined ? {} : { figure: question.figure })}
+      />
 
       {askingQuit ? (
         <QuitConfirm onStay={() => setAskingQuit(false)} onLeave={onQuit ?? (() => undefined)} />
@@ -387,9 +390,12 @@ function InputArea({
   onTyped: (next: string) => void
   onSubmit: (given: AnswerValue) => void
 }) {
+  // 그림이 붙은 문제는 입력 쪽을 한 뼘 줄여 그림에 자리를 돌려준다
+  const compact = question.figure !== undefined
+
   switch (question.inputType) {
     case 'choice':
-      return <ChoiceGrid choices={question.choices ?? []} onPick={onSubmit} />
+      return <ChoiceGrid compact={compact} choices={question.choices ?? []} onPick={onSubmit} />
     case 'order':
       return (
         <OrderPicker
@@ -402,8 +408,26 @@ function InputArea({
           onSubmit={(order) => onSubmit(order)}
         />
       )
+    case 'decimal':
+      return (
+        <NumPad
+          decimal
+          compact={compact}
+          value={typed}
+          onChange={onTyped}
+          onSubmit={() => onSubmit(typed)}
+        />
+      )
     default:
-      return <NumPad value={typed} onChange={onTyped} onSubmit={() => onSubmit(typed)} />
+      // 수 정답은 수로 넘긴다. '07' 처럼 눌러도 7 로 채점되어야 한다.
+      return (
+        <NumPad
+          compact={compact}
+          value={typed}
+          onChange={onTyped}
+          onSubmit={() => onSubmit(Number(typed))}
+        />
+      )
   }
 }
 

@@ -13,20 +13,15 @@ describe('월드 메타데이터 — 설계서 2장', () => {
     expect(new Set(WORLDS.map((w) => w.part)).size).toBe(8)
   })
 
-  it('MVP 범위인 월드 1~3 은 플레이할 수 있다', () => {
-    for (const id of [1, 2, 3] as const) {
+  it('여덟 월드를 모두 끝까지 플레이할 수 있다', () => {
+    // 하나라도 준비 중이면 아이가 거기서 막힌다
+    for (const id of [1, 2, 3, 4, 5, 6, 7, 8] as const) {
       expect(isPlayable(worldById(id)), String(id)).toBe(true)
     }
   })
 
-  it('월드 4~8 은 아직 문제가 없다', () => {
-    for (const id of [4, 5, 6, 7, 8] as const) {
-      expect(isPlayable(worldById(id)), String(id)).toBe(false)
-    }
-  })
-
   it('플레이할 수 있는 월드는 모든 단계에 템플릿이 있다', () => {
-    for (const id of [1, 2, 3] as const) {
+    for (const id of [1, 2, 3, 4, 5, 6, 7, 8] as const) {
       const world = worldById(id)
       for (const level of STAGE_ORDER) {
         expect(templatesFor(world, level).length, `${world.name} ${String(level)}`).toBeGreaterThan(0)

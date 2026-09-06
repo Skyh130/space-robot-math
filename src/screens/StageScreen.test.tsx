@@ -384,3 +384,44 @@ describe('StageScreen — 중간에 나가기', () => {
     expect(screen.queryByLabelText('내가 쓴 답')).not.toBeInTheDocument()
   })
 })
+
+describe('StageScreen — 소수 입력 (W7)', () => {
+  /** W7 Lv4 는 소수점 키가 붙은 숫자패드를 쓴다. */
+  function decimalStage(): Question[] {
+    const world = worldById(7)
+    return buildStage(templatesFor(world, 4), stageSeed(7, 4, 0), { count: 2 })
+  }
+
+  it('소수점 키로 0.5 같은 답을 넣을 수 있다', async () => {
+    const user = userEvent.setup()
+    const questions = decimalStage()
+    render(<StageScreen questions={questions} label="x" onFinish={vi.fn()} />)
+
+    const first = questions[0] as Question
+    expect(first.inputType).toBe('decimal')
+
+    for (const character of String(first.answer)) {
+      await user.click(character === '.' ? key('소수점') : key(character))
+    }
+    await user.click(key('확인'))
+    expect(screen.getByText('잘했어!')).toBeInTheDocument()
+  })
+
+  it('소수점을 두 번 찍을 수 없고, 점만 찍고는 확인할 수 없다', async () => {
+    const user = userEvent.setup()
+    render(<StageScreen questions={decimalStage()} label="x" onFinish={vi.fn()} />)
+
+    await user.click(key('소수점'))
+    // 비어 있을 때 누르면 '0.' 으로 시작한다
+    expect(screen.getByLabelText('내가 쓴 답').textContent).toBe('0.')
+    expect(key('소수점')).toBeDisabled()
+    // 점으로 끝나는 값은 아직 답이 아니다
+    expect(key('확인')).toBeDisabled()
+
+    await user.click(key('7'))
+    expect(screen.getByLabelText('내가 쓴 답').textContent).toBe('0.7')
+    // 소수 한 자리까지만 받는다. '0.70' 이 되면 '0.7' 과 글자가 달라진다
+    await user.click(key('5'))
+    expect(screen.getByLabelText('내가 쓴 답').textContent).toBe('0.7')
+  })
+})

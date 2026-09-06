@@ -1,6 +1,11 @@
 import { world1Templates } from './world1'
 import { world2Templates } from './world2'
 import { world3Templates } from './world3'
+import { world4Templates } from './world4'
+import { world5Templates } from './world5'
+import { world6Templates } from './world6'
+import { world7Templates } from './world7'
+import { world8Templates } from './world8'
 import type { AnyQuestionTemplate, StageLevel, WorldId } from '../engine/types'
 
 /** 월드 메타데이터. 설계서 2장의 표를 그대로 옮긴 것이다. */
@@ -30,11 +35,11 @@ export const WORLDS: readonly WorldMeta[] = [
   { id: 1, name: '숫자 소행성대', topic: '세 자리·네 자리 수', part: 'head', partName: '헤드 유닛', templates: world1Templates },
   { id: 2, name: '중력 협곡', topic: '덧셈과 뺄셈', part: 'left_arm', partName: '왼팔', templates: world2Templates },
   { id: 3, name: '에너지 코어 공장', topic: '곱셈구구', part: 'right_arm', partName: '오른팔', templates: world3Templates },
-  { id: 4, name: '관제 스테이션', topic: '시각과 시간', part: 'booster', partName: '부스터', templates: [] },
-  { id: 5, name: '구조물 격납고', topic: '평면도형과 길이', part: 'body', partName: '몸통', templates: [] },
-  { id: 6, name: '암흑 행성', topic: '나눗셈', part: 'left_leg', partName: '왼다리', templates: [] },
-  { id: 7, name: '액체 행성', topic: '분수와 소수', part: 'right_leg', partName: '오른다리', templates: [] },
-  { id: 8, name: '적 모선', topic: '표와 규칙', part: 'weapon', partName: '메인 웨폰', templates: [] },
+  { id: 4, name: '관제 스테이션', topic: '시각과 시간', part: 'booster', partName: '부스터', templates: world4Templates },
+  { id: 5, name: '구조물 격납고', topic: '평면도형과 길이', part: 'body', partName: '몸통', templates: world5Templates },
+  { id: 6, name: '암흑 행성', topic: '나눗셈', part: 'left_leg', partName: '왼다리', templates: world6Templates },
+  { id: 7, name: '액체 행성', topic: '분수와 소수', part: 'right_leg', partName: '오른다리', templates: world7Templates },
+  { id: 8, name: '적 모선', topic: '표와 규칙', part: 'weapon', partName: '메인 웨폰', templates: world8Templates },
 ]
 
 export function worldById(id: WorldId): WorldMeta {

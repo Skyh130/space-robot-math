@@ -11,6 +11,7 @@ import {
 } from './data/worlds'
 import { buildStage, stageSeed, starsFor, type StageLevel, type WorldId } from './engine'
 import { BossIntroScreen } from './screens/BossIntroScreen'
+import { EndingScreen } from './screens/EndingScreen'
 import { HangarScreen } from './screens/HangarScreen'
 import { PartRewardScreen } from './screens/PartRewardScreen'
 import { ResultScreen } from './screens/ResultScreen'
@@ -33,6 +34,7 @@ type Route =
   | { name: 'bossIntro'; world: WorldId }
   | { name: 'stage'; world: WorldId; level: StageLevel; attempt: number }
   | { name: 'reward'; world: WorldId }
+  | { name: 'ending' }
   | {
       name: 'result'
       world: WorldId
@@ -104,15 +106,21 @@ function Router() {
     return <HangarScreen save={save} onBack={() => setRoute({ name: 'map', openWorld: null })} />
   }
 
+  if (route.name === 'ending') {
+    return <EndingScreen save={save} onHangar={() => setRoute({ name: 'hangar' })} />
+  }
+
   if (route.name === 'reward') {
     const world = worldById(route.world)
+    // 마지막 부품이면 격납고 대신 엔딩으로 간다. 여덟 개를 다 모은 판이다.
+    const complete = save.parts.length >= WORLDS.length
     return (
       <PartRewardScreen
         part={world.part}
         partName={world.partName}
         parts={save.parts}
         totalParts={WORLDS.length}
-        onContinue={() => setRoute({ name: 'hangar' })}
+        onContinue={() => setRoute(complete ? { name: 'ending' } : { name: 'hangar' })}
       />
     )
   }

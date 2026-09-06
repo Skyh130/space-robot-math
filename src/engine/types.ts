@@ -19,15 +19,21 @@ export type StageLevel = 1 | 2 | 3 | 4 | 5 | 'boss' | 'challenge'
 
 /**
  * 입력 방식.
- * drag 는 W4 시계 바늘 / W5 도형 조립 / W6 똑같이 나누기 세 곳에만 쓴다.
- * 모바일에서 정밀 드래그는 실패율이 높다. (설계서 4장)
+ *
+ * decimal 은 소수점 키가 붙은 숫자패드다. W7 소수 문제에만 쓴다.
+ * 소수 정답은 문자열('0.5')로 둔다. 0.1 + 0.2 같은 부동소수 오차를 채점에
+ * 끌어들이지 않기 위해서다. 검사기도 수 정답은 정수만 받는다.
+ *
+ * drag 는 쓰지 않는다. 설계서는 W4 시계·W5 도형·W6 나누기에 드래그를 적었지만,
+ * 같은 문서가 "모바일에서 정밀 드래그는 실패율이 높다"고도 적었다. 8살이 답을
+ * 아는데 손이 미끄러져 틀리면 그건 오답이 아니라 우리 잘못이다. 그 세 곳은
+ * 그림을 문제에 붙이고(figure) 탭으로 고르게 했다. 타입은 남겨 두되 쓰지 않는다.
  */
-export type InputType = 'numpad' | 'choice' | 'drag' | 'order'
+export type InputType = 'numpad' | 'choice' | 'drag' | 'order' | 'decimal'
 
 /**
  * 통계 집계 키. 부모 대시보드의 취약 영역 그래프와 복습 문제 편성의 근거가 된다.
- * 여기 있는 값은 설계서 5장에서 MVP 범위인 W1~W3 것만 뽑은 것이다.
- * W4~W8 키는 Phase 8에서 추가한다.
+ * 값은 설계서 5장의 월드별 학습 주제에서 뽑았다.
  */
 export type SkillKey =
   // W1 숫자 소행성대
@@ -51,6 +57,31 @@ export type SkillKey =
   | 'multiplication_table_hard'
   | 'multiplication_blank'
   | 'word_problem_multiply'
+  // W4 관제 스테이션
+  | 'clock_read'
+  | 'time_calc'
+  | 'word_problem_time'
+  // W5 구조물 격납고
+  | 'shape_classify'
+  | 'shape_parts'
+  | 'length_measure'
+  | 'length_calc'
+  // W6 암흑 행성
+  | 'division_share'
+  | 'division_fact'
+  | 'division_remainder'
+  | 'multiply_two_digit'
+  | 'word_problem_divide'
+  // W7 액체 행성
+  | 'fraction_read'
+  | 'fraction_compare'
+  | 'decimal_read'
+  | 'decimal_compare'
+  // W8 적 모선
+  | 'table_read'
+  | 'graph_read'
+  | 'pattern_find'
+  | 'word_problem_multi'
 
 /** 파라미터가 뽑히는 구간. 양끝을 포함한다. */
 export type ParamRange = readonly [min: number, max: number]
@@ -81,6 +112,14 @@ export type MistakeKind =
   | 'place_confused' // 자릿값 혼동: 472 의 7 을 7 이나 700 으로
   | 'off_by_one' // 한 칸 세기 실수
   | 'off_by_ten' // 십의 자리만 어긋남
+  | 'clock_hands_swapped' // 시침과 분침을 바꿔 읽음: 3시 10분을 2시 15분으로
+  | 'clock_mark_as_minute' // 시계 눈금 숫자를 그대로 분으로: 3 을 3분으로
+  | 'unit_confused' // 단위 혼동: 1cm 를 1mm 로, 2m 를 2cm 로
+  | 'remainder_ignored' // 나머지를 버리거나 몫과 뒤바꿈
+  | 'fraction_flipped' // 분자와 분모를 뒤집음: 3/4 를 4/3 으로
+  | 'fraction_part_counted' // 색칠한 칸 수만 세고 전체 칸 수를 놓침
+  | 'decimal_shift' // 소수점 자리를 밀어 읽음: 0.7 을 7 이나 0.07 로
+  | 'pattern_step_missed' // 규칙의 뛰는 폭을 한 번 빠뜨림
 
 /** 실수 하나를 재현하는 규칙. 재현할 수 없는 파라미터면 null 을 준다. */
 export type DistractorRule<S extends ParamSpec = ParamSpec> = {
@@ -115,6 +154,68 @@ export type HintVisual =
       readonly operation: 'add' | 'subtract'
     }
 
+/** 도형 이름. 그리는 일은 components/QuestionFigure.tsx 가 한다. */
+export type ShapeName =
+  | 'triangle'
+  | 'rightTriangle'
+  | 'square'
+  | 'rectangle'
+  | 'pentagon'
+  | 'hexagon'
+  | 'circle'
+
+/**
+ * 문제와 함께 보여주는 그림.
+ *
+ * 힌트 그림(HintVisual)과 다르다. 힌트는 틀린 뒤에 나오지만 이것은 문제의 일부다.
+ * 시계를 안 보여주고 "몇 시야?" 라고 물을 수는 없다.
+ *
+ * 힌트 그림에 이미 있는 종류는 그대로 다시 쓴다. 수직선과 ○ 묶음은 문제에도
+ * 힌트에도 필요한데, 같은 것을 두 번 그리면 언젠가 둘이 어긋난다.
+ */
+export type FigureOnly =
+  /** 아날로그 시계. hour 는 1~12, minute 는 0~59. */
+  | { readonly kind: 'clock'; readonly hour: number; readonly minute: number }
+  /** 도형 하나. marks 로 꼭짓점·변·직각 표시를 켠다. */
+  | {
+      readonly kind: 'shape'
+      readonly shape: ShapeName
+      readonly marks?: 'vertices' | 'edges' | 'rightAngle'
+    }
+  /** 자 위에 놓인 막대. 눈금은 mm 로 재고 cm 마다 숫자를 적는다. */
+  | { readonly kind: 'ruler'; readonly lengthMm: number }
+  /** 칸을 나눈 막대 여럿. 분수와 소수를 눈으로 비교한다. */
+  | {
+      readonly kind: 'fractionBars'
+      readonly bars: readonly {
+        readonly label: string
+        readonly parts: number
+        readonly filled: number
+      }[]
+    }
+  /** 막대그래프. */
+  | {
+      readonly kind: 'barChart'
+      readonly unit: string
+      readonly bars: readonly { readonly label: string; readonly value: number }[]
+    }
+  /** 표. 첫 줄이 머리글이다. */
+  | {
+      readonly kind: 'dataTable'
+      readonly headers: readonly string[]
+      readonly rows: readonly (readonly string[])[]
+      /** 물어보는 칸. [행, 열] 이며 0부터 센다. */
+      readonly highlight?: readonly [number, number]
+    }
+  /** 도형이 반복되는 줄. blankAt 자리는 물음표로 비운다. */
+  | {
+      readonly kind: 'shapePattern'
+      readonly items: readonly ShapeName[]
+      readonly blankAt: number
+    }
+
+export type QuestionFigure = HintVisual | FigureOnly
+
 /**
  * 문제 템플릿.
  *
@@ -140,6 +241,12 @@ export type QuestionTemplate<S extends ParamSpec = ParamSpec> = {
 
   /** 화면에 보일 문제 문장. */
   readonly render: (params: ParamsOf<S>) => string
+
+  /**
+   * 문장과 함께 보여줄 그림. 시계·도형·표처럼 그림이 곧 문제인 경우에 쓴다.
+   * 힌트 그림과 달리 처음부터 보인다.
+   */
+  readonly figure?: (params: ParamsOf<S>) => QuestionFigure
 
   /** 정답. */
   readonly answer: (params: ParamsOf<S>) => AnswerValue
@@ -183,6 +290,8 @@ export type Question = {
   readonly inputType: InputType
   /** 화면에 보일 문장. */
   readonly prompt: string
+  /** 문장과 함께 보여줄 그림. */
+  readonly figure?: QuestionFigure
   readonly params: Readonly<Record<string, number>>
   readonly answer: AnswerValue
   /** 4지선다일 때의 보기. 정답 하나와 실수 기반 오답들이 섞여 있다. */
